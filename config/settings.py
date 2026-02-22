@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'djoser',
     "accounts",
-    "production"
+    "production",
+    "wet_process"
 ]
 
 MIDDLEWARE = [
