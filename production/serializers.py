@@ -1,7 +1,7 @@
 from .import models
 from rest_framework import serializers
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Max
 from django.utils import timezone
 
 
@@ -130,7 +130,7 @@ class BatchSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.Batch
-        fields = ["id","mpo","size","color","batch_bundles","total_quantity","planning","updated_at","updated_by","scanned_bundles"]
+        fields = ["id","mpo","size","color","status","batch_bundles","total_quantity","planning","updated_at","updated_by","scanned_bundles"]
         read_only_fields = ("mpo","size","color","updated_by")
     
     def get_updated_at(self, obj):
@@ -229,12 +229,9 @@ class BatchStageHistorySerializer(serializers.ModelSerializer):
 class BatchStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.BatchStage
-        fields = ["batch","current_stage","sequence","current_status","production_status"]
+        fields = ["batch","current_stage","sequence","current_status"]
             
-    def update(self, instance:models.BatchStage, validated_data):
-        if instance.production_status == "closed":
-                raise serializers.ValidationError("This batch is already out for production")
-        
+    def update(self, instance:models.BatchStage, validated_data):        
         # When the request is for Closed
         if validated_data["current_status"] == "closed":
             
@@ -263,6 +260,13 @@ class BatchStageSerializer(serializers.ModelSerializer):
                         history.closed_at = timezone.now()
                         history.closed_by = get_user_name(self.context["request"])
                         history.save()
+                        
+                        # Update the batch status if it's closing for the last stage
+                        max_sequence = (instance.batch.planning.route_steps.aggregate(max_seq=Max("sequence")).get("max_seq"))
+                        
+                        if instance.sequence == max_sequence:
+                            instance.batch.status = "closed"
+                            instance.batch.save(update_fields=["status"])       
     
                 # When the stage is already closed    
                 else:

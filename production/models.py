@@ -72,10 +72,19 @@ class ReceivedBundle(models.Model):
 
 
 class Batch(models.Model):
+    STATUS_IN = "in"
+    STATUS_CLOSED = "closed"
+
+    STATUS_CHOICES = [
+        (STATUS_IN, "In"),
+        (STATUS_CLOSED, "Closed"),
+    ]
+    
     mpo = models.CharField(max_length=50)
     size = models.CharField(max_length=20)
     color = models.CharField(max_length=20)
     planning = models.ForeignKey(Planning, on_delete=models.CASCADE, related_name="batches")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default = STATUS_IN)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.CharField(max_length=100)
     
@@ -113,11 +122,6 @@ class BatchStage(models.Model):
         choices=STATUS_CHOICES
     )
     
-    production_status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES
-    )
-
     def __str__(self):
         return f"Batch {self.batch_id} - {self.current_stage}"
     

@@ -22,7 +22,7 @@ class ReceivedBundleAdmin(admin.ModelAdmin):
     
 @admin.register(models.Batch)
 class BatchAdmin(admin.ModelAdmin):
-    list_display = ["id","mpo","size","color","updated_at","updated_by"]     
+    list_display = ["id","mpo","size","color","status","updated_at","updated_by",]     
 
 @admin.register(models.BatchBundle)
 class BatchBundleAdmin(admin.ModelAdmin):
@@ -30,7 +30,7 @@ class BatchBundleAdmin(admin.ModelAdmin):
     
 @admin.register(models.BatchStage)
 class BatchStageAdmin(admin.ModelAdmin):
-    list_display = ["batch_id","current_stage","sequence","current_status","production_status"]    
+    list_display = ["batch_id","current_stage","sequence","current_status"]    
     
 @admin.register(models.BatchStageHistory)
 class BatchStageHistoryAdmin(admin.ModelAdmin):

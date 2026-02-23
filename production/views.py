@@ -15,7 +15,6 @@ from . import serializers
 
 def create_fabricated_data(fabricated_data,route):
     fabricated_data["sequence"] = route.sequence
-    fabricated_data["production_status"] = "in"
     return fabricated_data
 
 def check_stage(batch,stage):
@@ -109,7 +108,9 @@ class ReceivedBundleViewSet(ModelViewSet):
 class BatchViewSet(ModelViewSet):
     http_method_names = ["get","post","delete"]
     queryset = Batch.objects.all().select_related("planning").prefetch_related("planning__route_steps","batch_bundles__received")
-    serializer_class = serializers.BatchSerializer 
+    serializer_class = serializers.BatchSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ["status"] 
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
