@@ -7,10 +7,13 @@ class BatchForFirstWash(models.Model):
     created_by = models.CharField(max_length=100)
     total_quantity = models.IntegerField(default=0)
     status  = models.CharField(max_length=100,null=True,blank=True) # If it's needed later
+    
+    def __str__(self):
+        return f"{self.id}"
 
 # When the source is created batches from dry process    
 class FirstWashBatchSource(models.Model):
-    first_wash_batch = models.ForeignKey(
+    batch_for_first_wash = models.ForeignKey(
         BatchForFirstWash,
         on_delete=models.CASCADE,
         related_name="source_batches"
@@ -19,11 +22,11 @@ class FirstWashBatchSource(models.Model):
         Batch,
         on_delete=models.PROTECT
     )
-    quantity_taken = models.IntegerField()
+    quantity = models.IntegerField()
     
 # When the source is the bundles
 class FirstWashBundleSource(models.Model):
-    first_wash_batch = models.ForeignKey(
+    batch_for_first_wash = models.ForeignKey(
         BatchForFirstWash,
         on_delete=models.CASCADE,
         related_name="source_bundles"
@@ -32,4 +35,4 @@ class FirstWashBundleSource(models.Model):
         ReceivedBundle,
         on_delete=models.PROTECT
     )
-    quantity_taken = models.IntegerField()        
+    quantity = models.IntegerField()        
