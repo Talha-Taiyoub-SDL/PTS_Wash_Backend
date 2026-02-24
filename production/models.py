@@ -46,6 +46,7 @@ class ReceivedBundle(models.Model):
         (STATUS_ALLOCATED, "Allocated"),
     ]
 
+    so = models.CharField(max_length=100)
     mpo = models.CharField(max_length=100)
     buyer = models.CharField(max_length=100)
     style = models.CharField(max_length=100)
