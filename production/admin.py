@@ -18,7 +18,7 @@ class PlanningRouteStepAdmin(admin.ModelAdmin):
     
 @admin.register(models.ReceivedBundle)
 class ReceivedBundleAdmin(admin.ModelAdmin):
-    list_display = ["id","mpo","buyer","style","marker","bundle_no","bundle_barcode","size","shade","color","quantity","received_at","received_by","status"]   
+    list_display = ["id","so","mpo","buyer","style","marker","bundle_no","bundle_barcode","size","shade","color","quantity","received_at","received_by","status"]   
     
 @admin.register(models.Batch)
 class BatchAdmin(admin.ModelAdmin):
