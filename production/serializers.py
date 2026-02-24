@@ -96,7 +96,7 @@ class PlanningSerializer(serializers.ModelSerializer):
 class ReceivedBundleSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ReceivedBundle
-        fields = ["id","mpo","buyer","style","marker","bundle_no","bundle_barcode","size","shade","color","quantity","received_at","received_by","status"]
+        fields = ["id","so","mpo","buyer","style","marker","bundle_no","bundle_barcode","size","shade","color","quantity","received_at","received_by","status"]
         read_only_fields = ("received_by", "status", "received_at")
                   
     def create(self, validated_data):
