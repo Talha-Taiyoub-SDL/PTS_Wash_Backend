@@ -74,4 +74,15 @@ class ProcessFirstWash(models.Model):
     unload_finish = models.DateTimeField(null=True, blank=True)
     unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
    
-           
+class ProcessFirstWashHydro(models.Model):
+    batch = models.OneToOneField(BatchForFirstWash, on_delete=models.CASCADE, related_name="process_first_wash_hydro")
+    machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name="first_wash_hydro_processes")
+    
+    # Hydro In
+    hydro_in = models.DateTimeField(auto_now_add=True)
+    hydro_in_by = models.CharField(max_length=100)
+    
+    #Hydro Out
+    hydro_out = models.DateTimeField(null=True,blank=True)
+    hydro_out_by = models.CharField(max_length=100, null=True,blank=True)
+    
