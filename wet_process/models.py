@@ -1,5 +1,14 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from production.models import Batch, ReceivedBundle
+
+class Machine(models.Model):
+    machine_number = models.IntegerField(
+        primary_key=True,
+        validators=[MinValueValidator(1)]
+    )
+    SAP = models.CharField(max_length=100)
+    added_at = models.DateTimeField(auto_now_add=True)
 
 class BatchForFirstWash(models.Model):
     shade = models.CharField(max_length=50)
@@ -11,7 +20,7 @@ class BatchForFirstWash(models.Model):
     def __str__(self):
         return f"{self.id}"
 
-# When the source is created batches from dry process    
+# When the source is "created batches" from dry process    
 class FirstWashBatchSource(models.Model):
     batch_for_first_wash = models.ForeignKey(
         BatchForFirstWash,
@@ -36,3 +45,16 @@ class FirstWashBundleSource(models.Model):
         on_delete=models.PROTECT
     )
     quantity = models.IntegerField()        
+    
+    
+# class ProcessFirstWash(models.Model):
+#     batch = models.OneToOneField(BatchForFirstWash, on_delete=models.CASCADE) 
+#     loading_start = models.DateTimeField()
+#     loading_started_by = models.CharField(max_length=100)
+#     loading_finished_by = models.DateTimeField(null=True,blank=True)
+#     process_finish = models.DateTimeField(null=True,blank=True)
+#     process_finished_by = models.CharField(max_length=100)
+#     unload_finish = models.DateTimeField(null=True,blank=True)
+#     unload_finished_by = models.DateTimeField(null=True,blank=True)
+#     machine = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name= )
+           
