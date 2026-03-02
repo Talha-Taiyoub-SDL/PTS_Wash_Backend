@@ -45,16 +45,33 @@ class FirstWashBundleSource(models.Model):
         on_delete=models.PROTECT
     )
     quantity = models.IntegerField()        
-    
-    
-# class ProcessFirstWash(models.Model):
-#     batch = models.OneToOneField(BatchForFirstWash, on_delete=models.CASCADE) 
-#     loading_start = models.DateTimeField()
-#     loading_started_by = models.CharField(max_length=100)
-#     loading_finished_by = models.DateTimeField(null=True,blank=True)
-#     process_finish = models.DateTimeField(null=True,blank=True)
-#     process_finished_by = models.CharField(max_length=100)
-#     unload_finish = models.DateTimeField(null=True,blank=True)
-#     unload_finished_by = models.DateTimeField(null=True,blank=True)
-#     machine = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name= )
+        
+class ProcessFirstWash(models.Model):
+    batch = models.OneToOneField(
+        BatchForFirstWash,
+        on_delete=models.CASCADE,
+        related_name="first_wash_process"
+    )
+
+    machine = models.ForeignKey(
+        Machine,
+        on_delete=models.PROTECT,
+        related_name="first_wash_processes"
+    )
+
+    # Loading
+    loading_start = models.DateTimeField(auto_now_add=True)
+    loading_started_by = models.CharField(max_length=100)
+
+    loading_finish = models.DateTimeField(null=True, blank=True)
+    loading_finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+    # Loading is finished means process is automatically started 
+    process_finish = models.DateTimeField(null=True, blank=True)
+    process_finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+    # Process is finished means unloading is automatically started
+    unload_finish = models.DateTimeField(null=True, blank=True)
+    unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
+   
            
