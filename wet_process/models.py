@@ -85,4 +85,22 @@ class ProcessFirstWashHydro(models.Model):
     #Hydro Out
     hydro_out = models.DateTimeField(null=True,blank=True)
     hydro_out_by = models.CharField(max_length=100, null=True,blank=True)
+
+class ProcessFirstWashDryer(models.Model):
+    CONVEYOR = "conveyor"
+    OVEN = "oven"
+    TUMBLE = "tumble"
     
+    TYPE_CHOICES = [(CONVEYOR,"Conveyor"),(OVEN,"Oven"),(TUMBLE,"Tumble")]
+    
+    batch = models.ForeignKey(BatchForFirstWash,on_delete=models.CASCADE, related_name="first_wash_dryer_processes")
+    machine  = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name = "first_wash_dryer_processes")
+    
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    started_at = models.DateTimeField(auto_now_add=True)
+    started_by = models.CharField(max_length=100)
+    ended_at = models.DateTimeField(null=True,blank=True)
+    ended_by = models.CharField(max_length=100,null=True,blank=True)
+    
+    class Meta:
+        unique_together = [("batch","type")]
