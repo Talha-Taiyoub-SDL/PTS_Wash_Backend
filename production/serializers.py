@@ -427,3 +427,15 @@ class UpdateRejectionSerializer(serializers.ModelSerializer):
          instance.rejected_by = get_user_name(self.context["request"])
          instance.save(update_fields=["reason", "rejected_at", "rejected_by"])
          return instance
+
+class SimpleBatchBundleSerializer(serializers.ModelSerializer):
+    received = ReceivedBundleSerializer(read_only=True)
+    class Meta:
+        model = models.BatchBundle
+        fields = ["id","received"]
+      
+class SimpleBatchSerializer(serializers.ModelSerializer):
+    batch_bundles = SimpleBatchBundleSerializer(many=True,read_only=True)
+    class Meta:
+        model =models.Batch
+        fields = ["id","batch_bundles"]    

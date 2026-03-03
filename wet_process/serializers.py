@@ -1,6 +1,6 @@
 from django.db import transaction
 from production.models import Batch,ReceivedBundle
-from production.serializers import get_user_name,ReceivedBundleSerializer
+from production.serializers import get_user_name,ReceivedBundleSerializer,SimpleBatchSerializer
 from .models import BatchForFirstWash,FirstWashBatchSource,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
 from rest_framework import serializers
 
@@ -112,9 +112,29 @@ class BatchForFirstWashSerializer(serializers.ModelSerializer):
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
-        fields = ["id","machine_number","SAP","added_at"]
+        fields = ["machine_number","SAP","added_at"]
+
+class SimpleFirstWashBatchSourceSerializer(FirstWashBatchSourceSerializer):
+    batch = SimpleBatchSerializer(read_only=True)        
+ 
+class SimpleBatchForFirstWashSerializer(serializers.ModelSerializer):
+    source_batches = SimpleFirstWashBatchSourceSerializer(many=True, read_only=True)
+    class Meta:
+        model = BatchForFirstWash
+        fields = ["id","shade","total_quantity","status","source_batches"] 
         
-# class ProcessFirstWashSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ProcessFirstWash
-#         fields = ["id","batch","machine","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finishded_by"]      
+class ProcessFirstWashSerializer(serializers.ModelSerializer):
+    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    machine = MachineSerializer(read_only=True)
+    class Meta:
+        model = ProcessFirstWash
+        fields = ["id","batch_for_first_wash","machine","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finished_by"]
+
+class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessFirstWash   
+        fields = ["batch_for_first_wash","machine"]
+        
+    def create(self, validated_data):
+        first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
+        return first_wash               

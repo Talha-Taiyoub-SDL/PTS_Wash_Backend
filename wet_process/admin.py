@@ -13,3 +13,12 @@ class FirstWashBatchSourceAdmin(admin.ModelAdmin):
 @admin.register(models.FirstWashBundleSource)
 class FirstWashBundleSourceAdmin(admin.ModelAdmin):
     list_display = ["id","batch_for_first_wash","bundle","quantity"]
+    
+@admin.register(models.ProcessFirstWash)
+class ProcessFirstWashAdmin(admin.ModelAdmin):
+    list_display = ["id","batch_for_first_wash","machine","loading_start","loading_started_by"]   
+
+@admin.register(models.Machine)
+class MachineAdmin(admin.ModelAdmin):
+    list_display=["machine_number","SAP","added_at"]    
+     

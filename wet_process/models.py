@@ -47,7 +47,7 @@ class FirstWashBundleSource(models.Model):
     quantity = models.IntegerField()        
         
 class ProcessFirstWash(models.Model):
-    batch = models.OneToOneField(
+    batch_for_first_wash = models.OneToOneField(
         BatchForFirstWash,
         on_delete=models.CASCADE,
         related_name="first_wash_process"
@@ -75,7 +75,7 @@ class ProcessFirstWash(models.Model):
     unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
    
 class ProcessFirstWashHydro(models.Model):
-    batch = models.OneToOneField(BatchForFirstWash, on_delete=models.CASCADE, related_name="process_first_wash_hydro")
+    batch_for_first_wash = models.OneToOneField(BatchForFirstWash, on_delete=models.CASCADE, related_name="process_first_wash_hydro")
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT, related_name="first_wash_hydro_processes")
     
     # Hydro In
@@ -93,7 +93,7 @@ class ProcessFirstWashDryer(models.Model):
     
     TYPE_CHOICES = [(CONVEYOR,"Conveyor"),(OVEN,"Oven"),(TUMBLE,"Tumble")]
     
-    batch = models.ForeignKey(BatchForFirstWash,on_delete=models.CASCADE, related_name="first_wash_dryer_processes")
+    batch_for_first_wash = models.ForeignKey(BatchForFirstWash,on_delete=models.CASCADE, related_name="first_wash_dryer_processes")
     machine  = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name = "first_wash_dryer_processes")
     
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
@@ -103,4 +103,4 @@ class ProcessFirstWashDryer(models.Model):
     ended_by = models.CharField(max_length=100,null=True,blank=True)
     
     class Meta:
-        unique_together = [("batch","type")]
+        unique_together = [("batch_for_first_wash","type")]
