@@ -1,7 +1,7 @@
 from django.db import transaction
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name,ReceivedBundleSerializer
-from .models import BatchForFirstWash,FirstWashBatchSource,FirstWashBundleSource
+from .models import BatchForFirstWash,FirstWashBatchSource,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
 from rest_framework import serializers
 
 
@@ -108,3 +108,13 @@ class BatchForFirstWashSerializer(serializers.ModelSerializer):
             batch_for_first_wash.save()
 
             return batch_for_first_wash    
+
+class MachineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Machine
+        fields = ["id","machine_number","SAP","added_at"]
+        
+# class ProcessFirstWashSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ProcessFirstWash
+#         fields = ["id","batch","machine","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finishded_by"]      
