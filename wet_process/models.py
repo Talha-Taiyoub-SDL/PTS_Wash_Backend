@@ -9,6 +9,9 @@ class Machine(models.Model):
     )
     SAP = models.CharField(max_length=100)
     added_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.machine_number}-{self.SAP}"
 
 class BatchForFirstWash(models.Model):
     shade = models.CharField(max_length=50)

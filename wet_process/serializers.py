@@ -119,9 +119,10 @@ class SimpleFirstWashBatchSourceSerializer(FirstWashBatchSourceSerializer):
  
 class SimpleBatchForFirstWashSerializer(serializers.ModelSerializer):
     source_batches = SimpleFirstWashBatchSourceSerializer(many=True, read_only=True)
+    source_bundles = FirstWashBundleSourceSerializer(many=True,read_only=True)
     class Meta:
         model = BatchForFirstWash
-        fields = ["id","shade","total_quantity","status","source_batches"] 
+        fields = ["id","shade","total_quantity","status","source_batches","source_bundles"] 
         
 class ProcessFirstWashSerializer(serializers.ModelSerializer):
     batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
@@ -137,4 +138,6 @@ class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
-        return first_wash               
+        return first_wash
+    
+                       
