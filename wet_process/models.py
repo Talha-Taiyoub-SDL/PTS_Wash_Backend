@@ -100,10 +100,10 @@ class ProcessFirstWashDryer(models.Model):
     machine  = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name = "first_wash_dryer_processes")
     
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
-    started_at = models.DateTimeField(auto_now_add=True)
-    started_by = models.CharField(max_length=100)
-    ended_at = models.DateTimeField(null=True,blank=True)
-    ended_by = models.CharField(max_length=100,null=True,blank=True)
+    dryer_in = models.DateTimeField(auto_now_add=True)
+    dryer_in_by = models.CharField(max_length=100)
+    dryer_out = models.DateTimeField(null=True,blank=True)
+    dryer_out_by = models.CharField(max_length=100,null=True,blank=True)
     
     class Meta:
         unique_together = [("batch_for_first_wash","type")]

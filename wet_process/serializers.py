@@ -128,6 +128,7 @@ class SimpleBatchForFirstWashSerializer(serializers.ModelSerializer):
 class ProcessFirstWashSerializer(serializers.ModelSerializer):
     batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
     machine = MachineSerializer(read_only=True)
+    
     class Meta:
         model = ProcessFirstWash
         fields = ["id","batch_for_first_wash","machine","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finished_by"]
@@ -143,32 +144,107 @@ class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
     
 class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
     state = serializers.CharField(max_length=100, write_only=True)
+    
     class Meta:
         model = ProcessFirstWash
         fields = ["state"]
         
-    def update(self, instance:ProcessFirstWash, validated_data):
+    def update(self, instance: ProcessFirstWash, validated_data):
+        # Map of timestamp fields to the user field who completed them
+        timestamp_to_user_field = {
+            "loading_finish": "loading_finished_by",
+            "process_finish": "process_finished_by",
+            "unload_finish": "unload_finished_by"
+        }
+
+        state_field = validated_data.get("state")
+        if state_field not in timestamp_to_user_field:
+            raise serializers.ValidationError("You have to provide a validated state")
+
+        # Check if the state has already been completed
+        if getattr(instance, state_field) is not None:
+            raise serializers.ValidationError("You've already completed this state")
+
+        # Get the corresponding "finished by" field
+        finished_by_field = timestamp_to_user_field[state_field]
+
+        # Update timestamp and user who finished it
+        setattr(instance, state_field, timezone.now())
+        setattr(instance, finished_by_field, get_user_name(self.context["request"]))
+        instance.save(update_fields=[state_field, finished_by_field])
+
+        return instance
+        
+class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["id","batch_for_first_wash","machine","hydro_in","hydro_in_by","hydro_out","hydro_out_by"]
+        
+class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["batch_for_first_wash","machine"]       
+    
+    def create(self, validated_data):
+        first_wash_hydro = ProcessFirstWashHydro.objects.create(**validated_data,hydro_in_by=get_user_name(self.context["request"]))            
+        return first_wash_hydro                               
+
+class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100)
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["state"]    
+    
+    def update(self, instance:ProcessFirstWashHydro, validated_data):
         state = validated_data["state"]
+        
+        if state != "hydro_out":
+            raise serializers.ValidationError("You have to provide validated state")
         
         if getattr(instance,state) is not None:
             raise serializers.ValidationError("You've already completed this state")
-        
-        if state == "loading_finish":
-            instance.loading_finish = timezone.now()
-            instance.loading_finished_by = get_user_name(self.context["request"])
-            instance.save(update_fields=["loading_finish","loading_finished_by"])
-        elif state == "process_finish":
-            instance.process_finish = timezone.now()
-            instance.process_finished_by = get_user_name(self.context["request"])
-            instance.save(update_fields=["process_finish","process_finished_by"])
-        elif state == "unload_finish":
-            instance.unload_finish = timezone.now()
-            instance.unload_finished_by = get_user_name(self.context["request"])
-            instance.save(update_fields=["unload_finish","unload_finished_by"])
-        else:
-            raise serializers.ValidationError("You have to provide validated state")
+    
+        instance.hydro_out = timezone.now()
+        instance.hydro_out_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["hydro_out","hydro_out_by"])
         
         return instance
+    
+class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
+    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    class Meta:
+        model = ProcessFirstWashDryer
+        fields = ["id","batch_for_first_wash","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]    
+
+class CreateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessFirstWashDryer
+        fields = ["batch_for_first_wash","machine","type"]
         
+    def create(self, validated_data):
+        first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
+        return first_wash_dryer
+    
+class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100)
+    class Meta:
+        model= ProcessFirstWashDryer
+        fields = ["state"]
         
-                                       
+    def update(self, instance:ProcessFirstWashDryer, validated_data):
+        state = validated_data["state"]
+        
+        if state != "dryer_out":
+            raise serializers.ValidationError("You have to provide validated state")
+        
+        if getattr(instance,state) is not None:
+            raise serializers.ValidationError("You've already completed this state")
+    
+        instance.dryer_out = timezone.now()
+        instance.dryer_out_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["dryer_out","dryer_out_by"])
+        
+        return instance
+                        

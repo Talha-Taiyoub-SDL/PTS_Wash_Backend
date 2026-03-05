@@ -431,7 +431,7 @@ class SimpleBatchBundleSerializer(serializers.ModelSerializer):
     received = ReceivedBundleSerializer(read_only=True)
     class Meta:
         model = models.BatchBundle
-        fields = ["id","received"]
+        fields = ["received"]
       
 class SimpleBatchSerializer(serializers.ModelSerializer):
     batch_bundles = SimpleBatchBundleSerializer(many=True,read_only=True)
