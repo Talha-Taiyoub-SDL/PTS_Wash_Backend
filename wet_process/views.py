@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .models import BatchForFirstWash,ProcessFirstWash, Machine
-from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer
+from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer, UpdateProcessFirstWashSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -15,11 +15,22 @@ class BatchForFirstWashViewSet(ModelViewSet):
     serializer_class = BatchForFirstWashSerializer
 
 class ProcessFirstWashViewSet(ModelViewSet):
-    queryset = ProcessFirstWash.objects.all()
+    def get_queryset(self):
+        queryset = ProcessFirstWash.objects.all()
+        batch_for_first_wash = self.request.query_params.get("batch")
+        if batch_for_first_wash:
+            queryset = queryset.filter(batch_for_first_wash=batch_for_first_wash)
+            
+        return queryset
+        
+    
     def get_serializer_class(self):
         if self.request.method == "POST":
             return CreateProcessFirstWashSerializer
-        return ProcessFirstWashSerializer
+        elif self.request.method == "PATCH":
+            return UpdateProcessFirstWashSerializer
+        else:
+            return ProcessFirstWashSerializer
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -27,7 +38,12 @@ class ProcessFirstWashViewSet(ModelViewSet):
         first_wash = serializer.save()
         serializer = ProcessFirstWashSerializer(first_wash)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
- 
-        
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessFirstWashSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
             

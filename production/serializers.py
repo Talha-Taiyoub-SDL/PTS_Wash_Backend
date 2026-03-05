@@ -4,7 +4,6 @@ from django.db import transaction
 from django.db.models import F, Max
 from django.utils import timezone
 
-
 def get_user_name(request):
     return (
         request.user.username

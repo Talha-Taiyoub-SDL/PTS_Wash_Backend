@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name,ReceivedBundleSerializer,SimpleBatchSerializer
 from .models import BatchForFirstWash,FirstWashBatchSource,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
@@ -140,4 +141,34 @@ class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
         first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
         return first_wash
     
-                       
+class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100, write_only=True)
+    class Meta:
+        model = ProcessFirstWash
+        fields = ["state"]
+        
+    def update(self, instance:ProcessFirstWash, validated_data):
+        state = validated_data["state"]
+        
+        if getattr(instance,state) is not None:
+            raise serializers.ValidationError("You've already completed this state")
+        
+        if state == "loading_finish":
+            instance.loading_finish = timezone.now()
+            instance.loading_finished_by = get_user_name(self.context["request"])
+            instance.save(update_fields=["loading_finish","loading_finished_by"])
+        elif state == "process_finish":
+            instance.process_finish = timezone.now()
+            instance.process_finished_by = get_user_name(self.context["request"])
+            instance.save(update_fields=["process_finish","process_finished_by"])
+        elif state == "unload_finish":
+            instance.unload_finish = timezone.now()
+            instance.unload_finished_by = get_user_name(self.context["request"])
+            instance.save(update_fields=["unload_finish","unload_finished_by"])
+        else:
+            raise serializers.ValidationError("You have to provide validated state")
+        
+        return instance
+        
+        
+                                       
