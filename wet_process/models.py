@@ -14,10 +14,11 @@ class Machine(models.Model):
         return f"{self.machine_number}-{self.SAP}"
 
 class BatchForFirstWash(models.Model):
+    buyer = models.CharField(max_length=100)
+    color = models.CharField(max_length=100)
     shade = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.CharField(max_length=100)
-    total_quantity = models.IntegerField(default=0)
     status  = models.CharField(max_length=100,null=True,blank=True) # If it's needed later
     
     def __str__(self):
@@ -30,11 +31,13 @@ class FirstWashBatchSource(models.Model):
         on_delete=models.CASCADE,
         related_name="source_batches"
     )
-    batch = models.ForeignKey(
-        Batch,
-        on_delete=models.PROTECT
-    )
-    quantity = models.IntegerField()
+    mpo = models.CharField(max_length=100)
+    style = models.CharField(max_length=100)
+    so = models.CharField(max_length=100)
+    quantity = models.PositiveIntegerField()
+    
+    class Meta:
+        unique_together = [("batch_for_first_wash", "mpo")]
     
 # When the source is the bundles
 class FirstWashBundleSource(models.Model):

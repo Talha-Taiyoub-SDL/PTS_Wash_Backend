@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin,contenttypes
 from . import models
 # Register your models here.
 

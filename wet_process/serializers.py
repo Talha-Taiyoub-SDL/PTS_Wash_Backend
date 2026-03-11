@@ -2,7 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name,ReceivedBundleSerializer,SimpleBatchSerializer
-from .models import BatchForFirstWash,FirstWashBatchSource,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
+from .models import BatchForFirstWash,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
 from rest_framework import serializers
 
 
@@ -18,10 +18,10 @@ class BundleSourceItemSerializer(serializers.Serializer):
     )
     quantity = serializers.IntegerField(min_value=1)
     
-class FirstWashBatchSourceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FirstWashBatchSource
-        fields = ["batch","quantity"]
+# class FirstWashBatchSourceSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         # model = FirstWashBatchSource
+#         fields = ["batch","quantity"]
             
 class FirstWashBundleSourceSerializer(serializers.ModelSerializer):
     bundle = ReceivedBundleSerializer()
@@ -30,7 +30,7 @@ class FirstWashBundleSourceSerializer(serializers.ModelSerializer):
         fields = ["bundle","quantity"]    
     
 class BatchForFirstWashSerializer(serializers.ModelSerializer):
-    source_batches = FirstWashBatchSourceSerializer(many=True,read_only=True)
+    # source_batches = FirstWashBatchSourceSerializer(many=True,read_only=True)
     source_bundles = FirstWashBundleSourceSerializer(many=True, read_only=True)
     batch_source = BatchSourceItemSerializer(many=True, write_only=True, required = False)
     bundle_source = BundleSourceItemSerializer(
@@ -60,73 +60,73 @@ class BatchForFirstWashSerializer(serializers.ModelSerializer):
 
         return attrs    
         
-    def create(self, validated_data):
-        batch_source_data = validated_data.pop("batch_source", None)
-        bundle_source_data = validated_data.pop("bundle_source", None)
+    # def create(self, validated_data):
+    #     batch_source_data = validated_data.pop("batch_source", None)
+    #     bundle_source_data = validated_data.pop("bundle_source", None)
 
-        created_by = get_user_name(self.context["request"])
-        total_quantity = 0
+    #     created_by = get_user_name(self.context["request"])
+    #     total_quantity = 0
         
-        with transaction.atomic():
-            # create the batch
-            batch_for_first_wash = BatchForFirstWash.objects.create(
-                created_by=created_by,
-                **validated_data
-            )
+    #     with transaction.atomic():
+    #         # create the batch
+    #         batch_for_first_wash = BatchForFirstWash.objects.create(
+    #             created_by=created_by,
+    #             **validated_data
+    #         )
 
-            #  when the source is batch
-            if batch_source_data:
-                total_quantity = sum(item["quantity"] for item in batch_source_data)
+    #         #  when the source is batch
+    #         if batch_source_data:
+    #             total_quantity = sum(item["quantity"] for item in batch_source_data)
 
-                for item in batch_source_data:
-                    FirstWashBatchSource.objects.create(
-                        batch_for_first_wash=batch_for_first_wash,
-                        batch=item["batch"],
-                        quantity=item["quantity"],
-                    )
+    #             for item in batch_source_data:
+    #                 FirstWashBatchSource.objects.create(
+    #                     batch_for_first_wash=batch_for_first_wash,
+    #                     batch=item["batch"],
+    #                     quantity=item["quantity"],
+    #                 )
 
-            # when the source is bundle
-            if bundle_source_data:
-                total_quantity = sum(item["quantity"] for item in bundle_source_data)
+    #         # when the source is bundle
+    #         if bundle_source_data:
+    #             total_quantity = sum(item["quantity"] for item in bundle_source_data)
 
-                for item in bundle_source_data:
-                    received_bundle = item["bundle"]
-                    # Check if the bundle is already allocated
-                    if received_bundle.status=="allocated":
-                        raise serializers.ValidationError(f"Bundle {received_bundle.id} is already allocated")
+    #             for item in bundle_source_data:
+    #                 received_bundle = item["bundle"]
+    #                 # Check if the bundle is already allocated
+    #                 if received_bundle.status=="allocated":
+    #                     raise serializers.ValidationError(f"Bundle {received_bundle.id} is already allocated")
                     
-                    FirstWashBundleSource.objects.create(
-                        batch_for_first_wash=batch_for_first_wash,
-                        bundle=received_bundle,
-                        quantity=item["quantity"],
-                    )
+    #                 FirstWashBundleSource.objects.create(
+    #                     batch_for_first_wash=batch_for_first_wash,
+    #                     bundle=received_bundle,
+    #                     quantity=item["quantity"],
+    #                 )
                     
-                    # update the received bundle's status
-                    received_bundle.status = "allocated"
-                    received_bundle.save(update_fields=["status"])
+    #                 # update the received bundle's status
+    #                 received_bundle.status = "allocated"
+    #                 received_bundle.save(update_fields=["status"])
 
-            batch_for_first_wash.total_quantity = total_quantity
-            batch_for_first_wash.save()
+    #         batch_for_first_wash.total_quantity = total_quantity
+    #         batch_for_first_wash.save()
 
-            return batch_for_first_wash    
+    #         return batch_for_first_wash    
 
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
         fields = ["machine_number","SAP","added_at"]
 
-class SimpleFirstWashBatchSourceSerializer(FirstWashBatchSourceSerializer):
-    batch = SimpleBatchSerializer(read_only=True)        
+# class SimpleFirstWashBatchSourceSerializer(FirstWashBatchSourceSerializer):
+#     batch = SimpleBatchSerializer(read_only=True)        
  
-class SimpleBatchForFirstWashSerializer(serializers.ModelSerializer):
-    source_batches = SimpleFirstWashBatchSourceSerializer(many=True, read_only=True)
-    source_bundles = FirstWashBundleSourceSerializer(many=True,read_only=True)
-    class Meta:
-        model = BatchForFirstWash
-        fields = ["id","shade","total_quantity","status","source_batches","source_bundles"] 
+# class SimpleBatchForFirstWashSerializer(serializers.ModelSerializer):
+#     source_batches = SimpleFirstWashBatchSourceSerializer(many=True, read_only=True)
+#     source_bundles = FirstWashBundleSourceSerializer(many=True,read_only=True)
+#     class Meta:
+#         model = BatchForFirstWash
+#         fields = ["id","shade","total_quantity","status","source_batches","source_bundles"] 
         
 class ProcessFirstWashSerializer(serializers.ModelSerializer):
-    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    # batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
     machine = MachineSerializer(read_only=True)
     
     class Meta:
@@ -176,7 +176,7 @@ class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
         return instance
         
 class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
-    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    # batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
     
     class Meta:
         model = ProcessFirstWashHydro
@@ -213,22 +213,29 @@ class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
         return instance
     
 class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-    batch_for_first_wash = SimpleBatchForFirstWashSerializer(read_only=True)
+    # We will not take input for this field from the frontend.
+    dryer_in_by = serializers.CharField(max_length=100, read_only=True)
+    
     class Meta:
         model = ProcessFirstWashDryer
-        fields = ["id","batch_for_first_wash","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]    
-
-class CreateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProcessFirstWashDryer
-        fields = ["batch_for_first_wash","machine","type"]
+        fields = ["id","batch_for_first_wash","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]
         
+    # Replace the batch_for_first_wash ID with its nested serialized data in responses,
+    # while still allowing it to be written as a primary key during create.
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     representation["batch_for_first_wash"] = SimpleBatchForFirstWashSerializer(
+    #         instance.batch_for_first_wash
+    #     ).data
+    #     return representation
+    
     def create(self, validated_data):
         first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
-        return first_wash_dryer
-    
+        return first_wash_dryer        
+   
 class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
     state = serializers.CharField(max_length=100)
+    
     class Meta:
         model= ProcessFirstWashDryer
         fields = ["state"]

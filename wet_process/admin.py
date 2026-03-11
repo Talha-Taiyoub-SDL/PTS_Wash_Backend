@@ -8,11 +8,11 @@ class MachineAdmin(admin.ModelAdmin):
 
 @admin.register(models.BatchForFirstWash)
 class BatchForFirstWashAdmin(admin.ModelAdmin):
-    list_display = ["id","shade","created_at","created_by","total_quantity","status"]
+    list_display = ["id","buyer","color","shade","created_at","created_by","status"]
 
 @admin.register(models.FirstWashBatchSource)
 class FirstWashBatchSourceAdmin(admin.ModelAdmin):
-    list_display = ["id","batch_for_first_wash","batch","quantity"]
+    list_display = ["id","batch_for_first_wash","mpo","style","so","quantity"]
     
 @admin.register(models.FirstWashBundleSource)
 class FirstWashBundleSourceAdmin(admin.ModelAdmin):
