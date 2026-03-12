@@ -11,7 +11,7 @@ class MachineViewSet(ModelViewSet):
     serializer_class = MachineSerializer
 
 class BatchForFirstWashViewSet(ModelViewSet):
-    queryset = BatchForFirstWash.objects.all().prefetch_related("source_batches","source_bundles__bundle")
+    queryset = BatchForFirstWash.objects.all().prefetch_related("source_batches","source_bundles__received")
     serializer_class = BatchForFirstWashSerializer
 
 class ProcessFirstWashViewSet(ModelViewSet):

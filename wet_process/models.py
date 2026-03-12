@@ -1,6 +1,8 @@
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.validators import MinValueValidator
-from production.models import Batch, ReceivedBundle
+from production.models import ReceivedBundle
 
 class Machine(models.Model):
     machine_number = models.IntegerField(
@@ -12,6 +14,26 @@ class Machine(models.Model):
     
     def __str__(self):
         return f"{self.machine_number}-{self.SAP}"
+    
+class Rejection(models.Model):
+    # Copy the barcode of the individual garment
+    individual_barcode = models.CharField(max_length=100, unique=True)
+    reason = models.CharField(max_length=100)
+    stage = models.CharField(max_length=100)
+    rejected_at = models.DateTimeField(auto_now=True)
+    rejected_by = models.CharField(max_length=100)
+    
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.PROTECT
+    )
+    object_id = models.PositiveIntegerField()
+    
+    # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
+    source_batch = GenericForeignKey(
+        "content_type",
+        "object_id"
+    )    
 
 class BatchForFirstWash(models.Model):
     buyer = models.CharField(max_length=100)
@@ -19,7 +41,12 @@ class BatchForFirstWash(models.Model):
     shade = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.CharField(max_length=100)
-    status  = models.CharField(max_length=100,null=True,blank=True) # If it's needed later
+    
+    # Implementing reverse relationship so that it behaves similar to related_name of a normal ForeignKey.
+    rejections = GenericRelation(
+        Rejection,
+        related_query_name="batch_for_first_wash" # It will work like Rejection.objects.filter(batch_for_first_wash=1)
+    )
     
     def __str__(self):
         return f"{self.id}"
@@ -46,7 +73,7 @@ class FirstWashBundleSource(models.Model):
         on_delete=models.CASCADE,
         related_name="source_bundles"
     )
-    bundle = models.ForeignKey(
+    received = models.ForeignKey(
         ReceivedBundle,
         on_delete=models.PROTECT
     )
@@ -110,3 +137,26 @@ class ProcessFirstWashDryer(models.Model):
     
     class Meta:
         unique_together = [("batch_for_first_wash","type")]
+        
+class WashLog(models.Model):
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.PROTECT
+    )
+    object_id = models.PositiveIntegerField()
+    
+    # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
+    source_batch = GenericForeignKey(
+        "content_type",
+        "object_id"
+    )
+    total_quantity = models.PositiveIntegerField()
+    rejections = models.PositiveIntegerField(default=0)
+    rewash_quantity = models.PositiveIntegerField(default=0)
+    remaining_rewash_quantity = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=100, null=True, blank=True)
+    
+    class Meta:
+        unique_together = [("content_type","object_id")]
+                        
+           
