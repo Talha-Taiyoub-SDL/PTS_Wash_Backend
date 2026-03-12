@@ -8,6 +8,7 @@ router.register("first-wash-batches", views.BatchForFirstWashViewSet, basename="
 router.register("first-wash-processes", views.ProcessFirstWashViewSet, basename="first-wash-process")
 router.register("first-wash-hydro-processes",views.ProcessFirstWashHydroViewSet, basename="first-wash-hydro-process")
 router.register("first-wash-dryer-processes",views.ProcessFirstWashDryerViewSet, basename="first-wash-dryer-process")
+router.register("rejections", views.RejectionViewSet, basename="rejection")
 
 urlpatterns = [
     path("",include(router.urls))

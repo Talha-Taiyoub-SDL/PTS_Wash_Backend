@@ -33,7 +33,28 @@ class Rejection(models.Model):
     source_batch = GenericForeignKey(
         "content_type",
         "object_id"
-    )    
+    )
+        
+class WashLog(models.Model):
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.PROTECT
+    )
+    object_id = models.PositiveIntegerField()
+    
+    # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
+    source_batch = GenericForeignKey(
+        "content_type",
+        "object_id"
+    )
+    total_quantity = models.PositiveIntegerField()
+    rejections = models.PositiveIntegerField(default=0)
+    rewash_quantity = models.PositiveIntegerField(default=0)
+    remaining_rewash_quantity = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=100, null=True, blank=True)
+    
+    class Meta:
+        unique_together = [("content_type","object_id")]
 
 class BatchForFirstWash(models.Model):
     buyer = models.CharField(max_length=100)
@@ -47,6 +68,8 @@ class BatchForFirstWash(models.Model):
         Rejection,
         related_query_name="batch_for_first_wash" # It will work like Rejection.objects.filter(batch_for_first_wash=1)
     )
+    
+    logs = GenericRelation(WashLog, related_query_name="batch_for_first_wash") # Even though there will be only one log per batch
     
     def __str__(self):
         return f"{self.id}"
@@ -138,25 +161,6 @@ class ProcessFirstWashDryer(models.Model):
     class Meta:
         unique_together = [("batch_for_first_wash","type")]
         
-class WashLog(models.Model):
-    content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.PROTECT
-    )
-    object_id = models.PositiveIntegerField()
-    
-    # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
-    source_batch = GenericForeignKey(
-        "content_type",
-        "object_id"
-    )
-    total_quantity = models.PositiveIntegerField()
-    rejections = models.PositiveIntegerField(default=0)
-    rewash_quantity = models.PositiveIntegerField(default=0)
-    remaining_rewash_quantity = models.PositiveIntegerField(default=0)
-    status = models.CharField(max_length=100, null=True, blank=True)
-    
-    class Meta:
-        unique_together = [("content_type","object_id")]
+
                         
            

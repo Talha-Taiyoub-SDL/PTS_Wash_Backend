@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from .models import BatchForFirstWash,ProcessFirstWash, Machine,ProcessFirstWashDryer,ProcessFirstWashHydro
-from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer,UpdateProcessFirstWashHydroSerializer, ProcessFirstWashDryerSerializer, UpdateProcessFirstWashDryerSerializer
+from .models import BatchForFirstWash,ProcessFirstWash, Machine,ProcessFirstWashDryer,ProcessFirstWashHydro, Rejection
+from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer,UpdateProcessFirstWashHydroSerializer, ProcessFirstWashDryerSerializer, UpdateProcessFirstWashDryerSerializer, RejectionSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -106,3 +106,6 @@ class ProcessFirstWashDryerViewSet(ModelViewSet):
         serializer = ProcessFirstWashDryerSerializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
               
+class RejectionViewSet(ModelViewSet):
+    queryset = Rejection.objects.all()
+    serializer_class = RejectionSerializer              

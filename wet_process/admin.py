@@ -32,5 +32,9 @@ class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
       
 @admin.register(models.ProcessFirstWashDryer)
 class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
-    list_display = ["id","batch_for_first_wash","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]   
+    list_display = ["id","batch_for_first_wash","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]  
+    
+@admin.register(models.Rejection)
+class RejectionAdmin(admin.ModelAdmin):
+    list_display = ["id","individual_barcode","reason","stage","content_type","object_id","rejected_at", "rejected_by"]     
      

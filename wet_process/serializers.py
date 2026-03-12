@@ -1,9 +1,10 @@
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name,ReceivedBundleSerializer,SimpleBatchSerializer
-from .models import BatchForFirstWash,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer,  FirstWashBatchSource, WashLog
+from .models import BatchForFirstWash,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer,  FirstWashBatchSource, WashLog, Rejection
 from rest_framework import serializers
     
 class FirstWashBatchSourceSerializer(serializers.ModelSerializer):
@@ -261,3 +262,24 @@ class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
         
         return instance
                         
+class RejectionSerializer(serializers.ModelSerializer):
+    content_type = serializers.CharField(max_length=100)
+    class Meta:
+        model = Rejection
+        fields = ["id","individual_barcode","reason","stage","rejected_at","rejected_by","content_type","object_id"]
+        read_only_fields = ["rejected_by", "source_batch"]
+    
+    def to_representation(self, instance:Rejection):
+        representation= super().to_representation(instance)
+        representation["content_type"] = instance.content_type.model
+        return representation
+        
+    def create(self, validated_data):
+        content_type = ContentType.objects.get(model=validated_data.pop("content_type", None))
+        
+        rejection = Rejection.objects.create(**validated_data, rejected_by=get_user_name(self.context["request"]),content_type=content_type)
+        
+        #update the rejection quantity in the wash log
+        rejection.source_batch.logs.update(rejections=F("rejections") + 1)
+        return rejection
+                                    
