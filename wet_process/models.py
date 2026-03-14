@@ -84,7 +84,7 @@ class FirstWashBatchSource(models.Model):
     mpo = models.CharField(max_length=100)
     style = models.CharField(max_length=100)
     so = models.CharField(max_length=100)
-    quantity = models.PositiveIntegerField()
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     
     class Meta:
         unique_together = [("batch_for_first_wash", "mpo")]
@@ -161,6 +161,39 @@ class ProcessFirstWashDryer(models.Model):
     class Meta:
         unique_together = [("batch_for_first_wash","type")]
         
-
+class BatchForRewash(models.Model):
+    buyer = models.CharField(max_length=100)
+    color = models.CharField(max_length=100)
+    shade = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.CharField(max_length=100)
+    
+    # Implementing reverse relationship so that it behaves similar to related_name of a normal ForeignKey.
+    rejections = GenericRelation(
+        Rejection,
+        related_query_name="batch_for_rewash" # It will work like Rejection.objects.filter(batch_for_rewash=1)
+    )
+    
+    logs = GenericRelation(WashLog, related_query_name="batch_for_rewash") # Even though there will be only one log per batch
+    
+    def __str__(self):
+        return f"{self.id}"
+    
+class RewashBatchSource(models.Model):
+    batch_for_rewash = models.ForeignKey(BatchForRewash,on_delete=models.CASCADE, related_name="source_batches")
+    content_type = models.ForeignKey(ContentType,on_delete=models.PROTECT)
+    object_id = models.PositiveIntegerField()
+    
+    # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
+    source_batch = GenericForeignKey(
+        "content_type",
+        "object_id"
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    
+    class Meta:
+        unique_together = ["batch_for_rewash","content_type","object_id"]
+        
+            
                         
            
