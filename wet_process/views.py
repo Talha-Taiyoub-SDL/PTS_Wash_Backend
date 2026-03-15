@@ -1,6 +1,7 @@
 from django.shortcuts import render
-from .models import BatchForFirstWash,ProcessFirstWash, Machine,ProcessFirstWashDryer,ProcessFirstWashHydro, Rejection
-from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer,UpdateProcessFirstWashHydroSerializer, ProcessFirstWashDryerSerializer, UpdateProcessFirstWashDryerSerializer, RejectionSerializer
+from django.contrib.contenttypes.models import ContentType
+from .models import BatchForFirstWash,ProcessFirstWash, Machine,ProcessFirstWashDryer,ProcessFirstWashHydro, Rejection, WashLog
+from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer, CreateProcessFirstWashSerializer, MachineSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer,UpdateProcessFirstWashHydroSerializer, ProcessFirstWashDryerSerializer, UpdateProcessFirstWashDryerSerializer, RejectionSerializer, WashLogSerializer, UpdateWashLogSerializer,BatchForRewashSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -108,4 +109,37 @@ class ProcessFirstWashDryerViewSet(ModelViewSet):
               
 class RejectionViewSet(ModelViewSet):
     queryset = Rejection.objects.all()
-    serializer_class = RejectionSerializer              
+    serializer_class = RejectionSerializer            
+    
+class WashLogViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = WashLog.objects.all()
+        content_type = self.request.query_params.get("content_type")
+        object_id = self.request.query_params.get("object_id")
+        
+        if content_type:
+            content_type = ContentType.objects.get(model=content_type)
+            queryset = queryset.filter(content_type=content_type.id)
+        
+        if object_id:
+            queryset = queryset.filter(object_id=object_id)
+            
+        return queryset
+    
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UpdateWashLogSerializer
+        else:
+            return WashLogSerializer
+        
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        wash_log = serializer.save()
+        serializer = WashLogSerializer(wash_log)
+        return Response(serializer.data)    
+    
+class BatchForRewashViewSet(ModelViewSet):
+    queryset = BatchForFirstWash.objects.all()
+    serializer_class = BatchForRewashSerializer    

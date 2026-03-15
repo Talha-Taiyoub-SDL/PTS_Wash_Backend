@@ -9,6 +9,9 @@ router.register("first-wash-processes", views.ProcessFirstWashViewSet, basename=
 router.register("first-wash-hydro-processes",views.ProcessFirstWashHydroViewSet, basename="first-wash-hydro-process")
 router.register("first-wash-dryer-processes",views.ProcessFirstWashDryerViewSet, basename="first-wash-dryer-process")
 router.register("rejections", views.RejectionViewSet, basename="rejection")
+router.register("wash-logs", views.WashLogViewSet, basename="wash-log")
+router.register("rewash-batches", views.BatchForRewashViewSet, basename="rewash-batch")
+
 
 urlpatterns = [
     path("",include(router.urls))

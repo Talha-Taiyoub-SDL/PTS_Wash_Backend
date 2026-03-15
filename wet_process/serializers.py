@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name,ReceivedBundleSerializer,SimpleBatchSerializer
-from .models import BatchForFirstWash,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer,  FirstWashBatchSource, WashLog, Rejection
+from .models import BatchForFirstWash,FirstWashBundleSource,Machine,ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer,  FirstWashBatchSource, WashLog, Rejection, BatchForRewash, RewashBatchSource
 from rest_framework import serializers
     
 class FirstWashBatchSourceSerializer(serializers.ModelSerializer):
@@ -282,4 +282,82 @@ class RejectionSerializer(serializers.ModelSerializer):
         #update the rejection quantity in the wash log
         rejection.source_batch.logs.update(rejections=F("rejections") + 1)
         return rejection
-                                    
+
+class RewashBatchSourceSerializer(serializers.ModelSerializer):
+    content_type = serializers.CharField(max_length=100)
+    class Meta:
+        model = RewashBatchSource
+        fields = ["id","content_type","object_id","quantity"]
+        read_only_fields = ["batch_for_rewash"]
+        
+    def to_representation(self, instance:RewashBatchSource):
+        representation = super().to_representation(instance)  
+        representation["content_type"] = instance.content_type.model
+        return representation
+
+class BatchForRewashSerializer(serializers.ModelSerializer):
+    source_batches = RewashBatchSourceSerializer(many=True)
+    class Meta:
+        model = BatchForRewash
+        fields =["id","buyer","color","shade","created_at","created_by","source_batches"]
+        read_only_fields = ["created_by"]
+            
+    def create(self, validated_data):
+        with transaction.atomic():
+            source_batches_data = validated_data.pop("source_batches", None)
+            batch_for_rewash = BatchForRewash.objects.create(**validated_data, created_by=get_user_name(self.context["request"]))
+            total_quantity = 0
+            
+            for source_batch_data in source_batches_data:
+                content_type = ContentType.objects.get(model=source_batch_data.pop("content_type", None))
+                source_batch = RewashBatchSource.objects.create(**source_batch_data, content_type=content_type, batch_for_rewash=batch_for_rewash)
+                total_quantity += source_batch.quantity
+                
+                # Update the Wash Log for this corresponding batch
+                wash_log = WashLog.objects.get(content_type=source_batch.content_type, object_id=source_batch.object_id)
+                wash_log.remaining_rewash_quantity = F("remaining_rewash_quantity") - source_batch.quantity
+                wash_log.save(update_fields=["remaining_rewash_quantity"])
+            
+            WashLog.objects.create(content_type=ContentType.objects.get_for_model(batch_for_rewash), object_id=batch_for_rewash.id, total_quantity=total_quantity)
+            
+            return batch_for_rewash
+       
+class WashLogSerializer(serializers.ModelSerializer):
+    batch_details = serializers.SerializerMethodField(method_name="get_batch_details", read_only=True)
+    class Meta:
+        model = WashLog
+        fields = ["id", "content_type", "object_id", "batch_details", "total_quantity", "rejections", "rewash_quantity", "remaining_rewash_quantity", "status"]  
+    
+    def get_batch_details(self,instance:WashLog):
+        batch = instance.source_batch
+        return {
+            "buyer": batch.buyer,
+            "color": batch.color,
+            "shade": batch.shade
+        }
+    
+    def to_representation(self, instance:WashLog):
+        representation = super().to_representation(instance)
+        representation["content_type"] = instance.content_type.model
+        return representation  
+    
+class UpdateWashLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WashLog
+        fields = ["rewash_quantity"]
+        read_only_fields = ["content_type","object_id","total_quantity"]
+        
+    def update(self, instance:WashLog, validated_data):
+        new_rewash_quantity = validated_data["rewash_quantity"]
+        increased_amount = new_rewash_quantity - instance.rewash_quantity
+
+        WashLog.objects.filter(id=instance.id).update(
+            remaining_rewash_quantity=F("remaining_rewash_quantity") + increased_amount,
+            rewash_quantity=new_rewash_quantity
+        )
+
+        instance.refresh_from_db()
+        return instance
+        
+            
+                                                            

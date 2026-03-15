@@ -37,4 +37,12 @@ class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
 @admin.register(models.Rejection)
 class RejectionAdmin(admin.ModelAdmin):
     list_display = ["id","individual_barcode","reason","stage","content_type","object_id","rejected_at", "rejected_by"]     
+    
+@admin.register(models.BatchForRewash)
+class BatchForRewashAdmin(admin.ModelAdmin):
+    list_display = ["id","buyer","color","shade","created_at","created_by"]
+    
+@admin.register(models.RewashBatchSource)
+class RewashBatchSourceAdmin(admin.ModelAdmin):
+    list_display = ["id", "content_type", "object_id", "quantity", "batch_for_rewash"]        
      
