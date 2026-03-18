@@ -5,6 +5,7 @@ from .serializers import BatchForFirstWashSerializer, ProcessFirstWashSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
+from rest_framework.decorators import action
 # Create your views here.
 
 class MachineViewSet(ModelViewSet):
@@ -131,6 +132,13 @@ class WashLogViewSet(ModelViewSet):
             return UpdateWashLogSerializer
         else:
             return WashLogSerializer
+    
+    # To provide the list of batches, consisting those new rewash batches can be created    
+    @action(detail=False, methods=["get"], url_path="rewashing")
+    def rewashing(self, request):
+        queryset = self.get_queryset().filter(remaining_rewash_quantity__gt=0)
+        serializer = WashLogSerializer(queryset, many=True)
+        return Response(serializer.data)
         
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
