@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.core.validators import MinValueValidator
 from production.models import ReceivedBundle
+from .choices import BatchStage, BatchType
 
 class Machine(models.Model):
     machine_number = models.IntegerField(
@@ -72,7 +73,7 @@ class BatchForFirstWash(models.Model):
     logs = GenericRelation(WashLog, related_query_name="batch_for_first_wash") # Even though there will be only one log per batch
     
     def __str__(self):
-        return f"{self.id}"
+        return f"{self.id}"    
 
 # When the source is "created batches" from dry process    
 class FirstWashBatchSource(models.Model):
@@ -193,7 +194,47 @@ class RewashBatchSource(models.Model):
     
     class Meta:
         unique_together = ["batch_for_rewash","content_type","object_id"]
-        
-            
-                        
+
+
+# New batches are started from this place.
+class Batch(models.Model):
+    buyer = models.CharField(max_length=100)
+    color = models.CharField(max_length=100)
+    shade = models.CharField(max_length=50)
+    stage = models.CharField(max_length=20, choices=BatchStage.choices)
+    type = models.CharField(max_length=20, choices=BatchType.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.CharField(max_length=100)
+    
+    # Implementing reverse relationship so that it behaves similar to related_name of a normal ForeignKey.
+    # rejections = GenericRelation(
+    #     Rejection,
+    #     related_query_name="batch" # It will work like Rejection.objects.filter(batch_for_first_wash=1)
+    # )
+    
+    # logs = GenericRelation(WashLog, related_query_name="batch") 
+    
+    def __str__(self):
+        return f"{self.id}"  
+    
+class InternalBatch(models.Model):
+    mpo = models.CharField(max_length=100)
+    style = models.CharField(max_length=100)
+    so = models.CharField(max_length=100)      
+    
+class BatchSource(models.Model):
+    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="sources")
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE) 
+    object_id = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    
+    source_object = GenericForeignKey(
+        "content_type",
+        "object_id"
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    
+    class Meta:
+        unique_together = ["batch","content_type","object_id"]     
+
+                          
            
