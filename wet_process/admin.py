@@ -26,9 +26,9 @@ class BatchSourceAdmin(admin.ModelAdmin):
 class ProcessFirstWashAdmin(admin.ModelAdmin):
     list_display = ["id","batch","machine","standard_time","loading_start","loading_started_by"]   
 
-# @admin.register(models.ProcessFirstWashHydro)
-# class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
-#     list_display = ["id","batch","machine","hydro_in","hydro_in_by","hydro_out","hydro_out_by"] 
+@admin.register(models.ProcessFirstWashHydro)
+class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
+    list_display = ["id","batch","machine","standard_time","hydro_in","hydro_in_by","hydro_out","hydro_out_by"] 
       
 # @admin.register(models.ProcessFirstWashDryer)
 # class ProcessFirstWashDryerAdmin(admin.ModelAdmin):
