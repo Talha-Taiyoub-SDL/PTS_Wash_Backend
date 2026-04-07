@@ -57,25 +57,13 @@ class Machine(models.Model):
     def __str__(self):
         return f"{self.machine_number}-{self.SAP}"
     
-# class Rejection(models.Model):
-#     # Copy the barcode of the individual garment
-#     individual_barcode = models.CharField(max_length=100, unique=True)
-#     reason = models.CharField(max_length=100)
-#     stage = models.CharField(max_length=100)
-#     rejected_at = models.DateTimeField(auto_now=True)
-#     rejected_by = models.CharField(max_length=100)
-    
-#     content_type = models.ForeignKey(
-#         ContentType,
-#         on_delete=models.PROTECT
-#     )
-#     object_id = models.PositiveIntegerField()
-    
-#     # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
-#     source_batch = GenericForeignKey(
-#         "content_type",
-#         "object_id"
-#     )
+class Rejection(models.Model):
+    # Copy the barcode of the individual garment
+    individual_barcode = models.CharField(max_length=100, unique=True)
+    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="rejections")
+    reason = models.CharField(max_length=100)
+    rejected_at = models.DateTimeField(auto_now=True)
+    rejected_by = models.CharField(max_length=100)  
         
 # class WashLog(models.Model):
 #     content_type = models.ForeignKey(

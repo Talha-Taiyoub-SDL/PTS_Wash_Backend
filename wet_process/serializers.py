@@ -4,13 +4,63 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name
-from .models import Machine, Batch, BatchSource, InternalBatch
+from .models import Machine, Batch, BatchSource, InternalBatch, Rejection
 from rest_framework import serializers
 
+class RejectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rejection
+        fields= ["id", "individual_barcode", "batch", "reason", "rejected_at", "rejected_by"]
+
+class CreateRejectionSerializer(serializers.Serializer):
+    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
+    rejections = serializers.ListField(child=serializers.DictField())
+
+    def create(self, validated_data):
+        batch = validated_data["batch"]
+        rejections = validated_data["rejections"]
+        user = get_user_name(self.context["request"])
+        
+        barcodes = [r["individual_barcode"] for r in rejections]
+
+        # check duplicates in payload
+        if len(barcodes) != len(set(barcodes)):
+            raise serializers.ValidationError({
+                "rejections": "Duplicate individual_barcode found in request."
+            })
+
+        # check duplicates in DB
+        existing = set(
+            Rejection.objects.filter(
+                individual_barcode__in=barcodes
+            ).values_list("individual_barcode", flat=True)
+        )
+
+        if existing:
+            raise serializers.ValidationError({
+                "rejections": f"These barcodes already exist: {list(existing)}"
+            })
+
+        objects = [
+            Rejection(
+                batch=batch,
+                rejected_by=user,
+                **rejection
+            )
+            for rejection in rejections
+        ]
+
+        created = Rejection.objects.bulk_create(objects)
+        return created
+
 class SimpleBatchSerializer(serializers.ModelSerializer):
+    rejection_count = serializers.SerializerMethodField(method_name="get_rejection_count", read_only=True)
     class Meta: 
         model = Batch
-        fields = ["id", "buyer", "color", "shade", "stage", "type"]
+        fields = ["id", "buyer", "color", "shade", "stage", "type", "rejection_count"]
+    
+    def get_rejection_count(self,instance:Batch):
+            return instance.rejections.count()
 
 class BatchQcSerializer(serializers.ModelSerializer):
     source = serializers.SerializerMethodField(method_name="get_source",read_only=True)
@@ -252,27 +302,7 @@ class MachineSerializer(serializers.ModelSerializer):
         
 #         return instance
                         
-# class RejectionSerializer(serializers.ModelSerializer):
-#     content_type = serializers.CharField(max_length=100)
-#     class Meta:
-#         model = Rejection
-#         fields = ["id","individual_barcode","reason","stage","rejected_at","rejected_by","content_type","object_id"]
-#         read_only_fields = ["rejected_by", "source_batch"]
     
-#     def to_representation(self, instance:Rejection):
-#         representation= super().to_representation(instance)
-#         representation["content_type"] = instance.content_type.model
-#         return representation
-        
-#     def create(self, validated_data):
-#         content_type = ContentType.objects.get(model=validated_data.pop("content_type", None))
-        
-#         rejection = Rejection.objects.create(**validated_data, rejected_by=get_user_name(self.context["request"]),content_type=content_type)
-        
-#         #update the rejection quantity in the wash log
-#         rejection.source_batch.logs.update(rejections=F("rejections") + 1)
-#         return rejection
-
 # class WashLogSerializer(serializers.ModelSerializer):
 #     batch_details = serializers.SerializerMethodField(method_name="get_batch_details", read_only=True)
 #     class Meta:

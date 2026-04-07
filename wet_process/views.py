@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.contenttypes.models import ContentType
-from .models import Machine, Batch, BatchSource
-from .serializers import MachineSerializer,  BatchSerializer, BatchQcSerializer
+from .models import Machine, Batch, BatchSource, Rejection
+from .serializers import MachineSerializer,  BatchSerializer, BatchQcSerializer, CreateRejectionSerializer, RejectionSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -104,9 +104,27 @@ class MachineViewSet(ModelViewSet):
 #         serializer = ProcessFirstWashDryerSerializer(instance)
 #         return Response(serializer.data, status=status.HTTP_200_OK)
               
-# class RejectionViewSet(ModelViewSet):
-#     queryset = Rejection.objects.all()
-#     serializer_class = RejectionSerializer            
+class RejectionViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = Rejection.objects.all()
+        batch = self.request.query_params.get("batch", None)
+        queryset = queryset.filter(batch=batch)
+        
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateRejectionSerializer
+        else:
+            return RejectionSerializer 
+        
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        rejections = serializer.save()
+        serializer = RejectionSerializer(rejections, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+                  
+    serializer_class = RejectionSerializer            
     
 # class WashLogViewSet(ModelViewSet):
 #     def get_queryset(self):
@@ -145,15 +163,29 @@ class MachineViewSet(ModelViewSet):
 #         return Response(serializer.data)      
     
 class BatchViewSet(ModelViewSet):
+    http_method_names = ["get", "post"]
     queryset = Batch.objects.all()
     serializer_class = BatchSerializer 
 
 class BatchQcViewSet(ModelViewSet):
+    http_method_names = ["get","patch"]
     def get_queryset(self):
-        queryset = BatchSource.objects.all()
-        batch = self.request.query_params.get("batch")
+        queryset = BatchSource.objects.all().select_related("batch")
+        batch = self.request.query_params.get("batch", None)
+        stage = self.request.query_params.get("stage", None)
+        type = self.request.query_params.get("type", None)
+        
         if batch:
-            queryset = queryset.filter(batch=batch)
+            queryset = queryset.filter(batch=batch)   
+        if stage:
+            queryset = queryset.filter(batch__stage=stage)  
+        if type: 
+            queryset = queryset.filter(batch__type=type)           
         return queryset
         
     serializer_class = BatchQcSerializer    
+    
+# Write documentation about the logic of showing remaining rewash quantity per mpo, style, and so. 
+# BatchSource er moddhe giye proti batch source traverse kore dekhte hobe:
+# (batch.stage = "first_wash" & batch.type="normal_wash" eder rewash_quantity (per mpo)) - (batch.stage = "first_wash" & batch.type = "rewash" er quantity per mpo)
+     
