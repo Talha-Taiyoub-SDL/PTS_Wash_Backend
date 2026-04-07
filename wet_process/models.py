@@ -86,33 +86,33 @@ class Rejection(models.Model):
 #     class Meta:
 #         unique_together = [("content_type","object_id")]
              
-# class ProcessFirstWash(models.Model):
-#     batch = models.OneToOneField(
-#         Batch,
-#         on_delete=models.CASCADE,
-#         related_name="first_wash_process"
-#     )
+class ProcessFirstWash(models.Model):
+    batch = models.OneToOneField(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name="process_first_wash"
+    )
+    
+    machine = models.ForeignKey(
+        Machine,
+        on_delete=models.PROTECT
+    )
+    standard_time = models.TimeField()
 
-#     machine = models.ForeignKey(
-#         Machine,
-#         on_delete=models.PROTECT,
-#         related_name="first_wash_processes"
-#     )
+    # Loading
+    loading_start = models.DateTimeField(auto_now_add=True)
+    loading_started_by = models.CharField(max_length=100)
 
-#     # Loading
-#     loading_start = models.DateTimeField(auto_now_add=True)
-#     loading_started_by = models.CharField(max_length=100)
+    loading_finish = models.DateTimeField(null=True, blank=True)
+    loading_finished_by = models.CharField(max_length=100, null=True, blank=True)
 
-#     loading_finish = models.DateTimeField(null=True, blank=True)
-#     loading_finished_by = models.CharField(max_length=100, null=True, blank=True)
+    # Loading is finished means process is automatically started 
+    process_finish = models.DateTimeField(null=True, blank=True)
+    process_finished_by = models.CharField(max_length=100, null=True, blank=True)
 
-#     # Loading is finished means process is automatically started 
-#     process_finish = models.DateTimeField(null=True, blank=True)
-#     process_finished_by = models.CharField(max_length=100, null=True, blank=True)
-
-#     # Process is finished means unloading is automatically started
-#     unload_finish = models.DateTimeField(null=True, blank=True)
-#     unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
+    # Process is finished means unloading is automatically started
+    unload_finish = models.DateTimeField(null=True, blank=True)
+    unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
    
 # class ProcessFirstWashHydro(models.Model):
 #     batch = models.OneToOneField(Batch, on_delete=models.CASCADE, related_name="process_first_wash_hydro")
