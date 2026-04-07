@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name
-from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash, ProcessFirstWashHydro
+from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
 from rest_framework import serializers
 
 class RejectionSerializer(serializers.ModelSerializer):
@@ -259,48 +259,48 @@ class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
         
         return instance
     
-# class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-#     # We will not take input for this field from the frontend.
-#     dryer_in_by = serializers.CharField(max_length=100, read_only=True)
+class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
+    # We will not take input for this field from the frontend.
+    dryer_in_by = serializers.CharField(max_length=100, read_only=True)
     
-#     class Meta:
-#         model = ProcessFirstWashDryer
-#         fields = ["id","batch","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]
+    class Meta:
+        model = ProcessFirstWashDryer
+        fields = ["id","batch","machine","standard_time","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]
         
-#     # Replace the batch ID with its nested serialized data in responses,
-#     # while still allowing it to be written as a primary key during create.
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         representation["batch"] = SimpleBatchSerializer(
-#             instance.batch
-#         ).data
-#         return representation
+    # Replace the batch ID with its nested serialized data in responses,
+    # while still allowing it to be written as a primary key during create.
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["batch"] = SimpleBatchSerializer(
+            instance.batch
+        ).data
+        return representation
     
-#     def create(self, validated_data):
-#         first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
-#         return first_wash_dryer        
+    def create(self, validated_data):
+        first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
+        return first_wash_dryer        
    
-# class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-#     state = serializers.CharField(max_length=100)
+class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100)
     
-#     class Meta:
-#         model= ProcessFirstWashDryer
-#         fields = ["state"]
+    class Meta:
+        model= ProcessFirstWashDryer
+        fields = ["state"]
         
-#     def update(self, instance:ProcessFirstWashDryer, validated_data):
-#         state = validated_data["state"]
+    def update(self, instance:ProcessFirstWashDryer, validated_data):
+        state = validated_data["state"]
         
-#         if state != "dryer_out":
-#             raise serializers.ValidationError("You have to provide validated state")
+        if state != "dryer_out":
+            raise serializers.ValidationError("You have to provide validated state")
         
-#         if getattr(instance,state) is not None:
-#             raise serializers.ValidationError("You've already completed this state")
+        if getattr(instance,state) is not None:
+            raise serializers.ValidationError("You've already completed this state")
     
-#         instance.dryer_out = timezone.now()
-#         instance.dryer_out_by = get_user_name(self.context["request"])
-#         instance.save(update_fields=["dryer_out","dryer_out_by"])
+        instance.dryer_out = timezone.now()
+        instance.dryer_out_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["dryer_out","dryer_out_by"])
         
-#         return instance
+        return instance
                         
     
 # class WashLogSerializer(serializers.ModelSerializer):

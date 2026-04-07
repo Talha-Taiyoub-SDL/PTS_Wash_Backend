@@ -30,9 +30,9 @@ class ProcessFirstWashAdmin(admin.ModelAdmin):
 class ProcessFirstWashHydroAdmin(admin.ModelAdmin):
     list_display = ["id","batch","machine","standard_time","hydro_in","hydro_in_by","hydro_out","hydro_out_by"] 
       
-# @admin.register(models.ProcessFirstWashDryer)
-# class ProcessFirstWashDryerAdmin(admin.ModelAdmin):
-#     list_display = ["id","batch","machine","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]  
+@admin.register(models.ProcessFirstWashDryer)
+class ProcessFirstWashDryerAdmin(admin.ModelAdmin):
+    list_display = ["id","batch","machine","standard_time","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]  
     
 @admin.register(models.Rejection)
 class RejectionAdmin(admin.ModelAdmin):

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.contenttypes.models import ContentType
-from .models import Machine, Batch, BatchSource, Rejection, ProcessFirstWash, ProcessFirstWashHydro
-from .serializers import CreateProcessFirstWashSerializer, MachineSerializer,  BatchSerializer, BatchQcSerializer, CreateRejectionSerializer, ProcessFirstWashSerializer, RejectionSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer, UpdateProcessFirstWashHydroSerializer
+from .models import Machine, Batch, BatchSource, ProcessFirstWashDryer, Rejection, ProcessFirstWash, ProcessFirstWashHydro
+from .serializers import CreateProcessFirstWashSerializer, MachineSerializer,  BatchSerializer, BatchQcSerializer, CreateRejectionSerializer, ProcessFirstWashDryerSerializer, ProcessFirstWashSerializer, RejectionSerializer, UpdateProcessFirstWashDryerSerializer, UpdateProcessFirstWashSerializer, ProcessFirstWashHydroSerializer, CreateProcessFirstWashHydroSerializer, UpdateProcessFirstWashHydroSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -76,33 +76,33 @@ class ProcessFirstWashHydroViewSet(ModelViewSet):
         serializer = ProcessFirstWashHydroSerializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)    
           
-# class ProcessFirstWashDryerViewSet(ModelViewSet):
-#     def get_queryset(self):
-#         queryset = ProcessFirstWashDryer.objects.all()
-#         batch_for_first_wash = self.request.query_params.get("batch")
-#         type = self.request.query_params.get("type")
+class ProcessFirstWashDryerViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = ProcessFirstWashDryer.objects.all()
+        batch = self.request.query_params.get("batch")
+        type = self.request.query_params.get("type")
         
-#         if batch_for_first_wash:
-#             queryset = queryset.filter(batch_for_first_wash=batch_for_first_wash)
+        if batch:
+            queryset = queryset.filter(batch=batch)
         
-#         if type:
-#             queryset = queryset.filter(type=type)
+        if type:
+            queryset = queryset.filter(type=type)
             
-#         return queryset
+        return queryset
     
-#     def get_serializer_class(self):
-#         if self.request.method == "PATCH":
-#             return UpdateProcessFirstWashDryerSerializer
-#         else:
-#             return ProcessFirstWashDryerSerializer
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UpdateProcessFirstWashDryerSerializer
+        else:
+            return ProcessFirstWashDryerSerializer
         
-#     def update(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         serializer = self.get_serializer(instance, data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         instance = serializer.save()
-#         serializer = ProcessFirstWashDryerSerializer(instance)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessFirstWashDryerSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
               
 class RejectionViewSet(ModelViewSet):
     def get_queryset(self):
