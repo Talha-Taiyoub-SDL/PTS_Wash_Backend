@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.contenttypes.models import ContentType
-from .models import Machine, Batch, BatchSource, Rejection
-from .serializers import MachineSerializer,  BatchSerializer, BatchQcSerializer, CreateRejectionSerializer, RejectionSerializer
+from .models import Machine, Batch, BatchSource, Rejection, ProcessFirstWash
+from .serializers import CreateProcessFirstWashSerializer, MachineSerializer,  BatchSerializer, BatchQcSerializer, CreateRejectionSerializer, ProcessFirstWashSerializer, RejectionSerializer, UpdateProcessFirstWashSerializer
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
@@ -12,37 +12,37 @@ class MachineViewSet(ModelViewSet):
     queryset = Machine.objects.all()
     serializer_class = MachineSerializer
 
-# class ProcessFirstWashViewSet(ModelViewSet):
-#     def get_queryset(self):
-#         queryset = ProcessFirstWash.objects.all()
-#         batch_for_first_wash = self.request.query_params.get("batch")
-#         if batch_for_first_wash:
-#             queryset = queryset.filter(batch_for_first_wash=batch_for_first_wash)
+class ProcessFirstWashViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = ProcessFirstWash.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
             
-#         return queryset
+        return queryset
     
-#     def get_serializer_class(self):
-#         if self.request.method == "POST":
-#             return CreateProcessFirstWashSerializer
-#         elif self.request.method == "PATCH":
-#             return UpdateProcessFirstWashSerializer
-#         else:
-#             return ProcessFirstWashSerializer
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateProcessFirstWashSerializer
+        elif self.request.method == "PATCH":
+            return UpdateProcessFirstWashSerializer
+        else:
+            return ProcessFirstWashSerializer
     
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         first_wash = serializer.save()
-#         serializer = ProcessFirstWashSerializer(first_wash)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        first_wash = serializer.save()
+        serializer = ProcessFirstWashSerializer(first_wash)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-#     def update(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         serializer = self.get_serializer(instance, data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         instance = serializer.save()
-#         serializer = ProcessFirstWashSerializer(instance)
-#         return Response(serializer.data, status=status.HTTP_200_OK) 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessFirstWashSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK) 
             
 # class ProcessFirstWashHydroViewSet(ModelViewSet):
 #     def get_queryset(self):

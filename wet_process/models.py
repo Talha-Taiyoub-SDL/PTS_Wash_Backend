@@ -97,7 +97,7 @@ class ProcessFirstWash(models.Model):
         Machine,
         on_delete=models.PROTECT
     )
-    standard_time = models.TimeField()
+    standard_time = models.DurationField()
 
     # Loading
     loading_start = models.DateTimeField(auto_now_add=True)

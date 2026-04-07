@@ -22,9 +22,9 @@ class BatchSourceAdmin(admin.ModelAdmin):
 # class WashLogAdmin(admin.ModelAdmin):
 #     list_display = ["id","content_type","object_id","total_quantity","rejections","rewash_quantity","remaining_rewash_quantity","status"]      
     
-# @admin.register(models.ProcessFirstWash)
-# class ProcessFirstWashAdmin(admin.ModelAdmin):
-#     list_display = ["id","batch","machine","loading_start","loading_started_by"]   
+@admin.register(models.ProcessFirstWash)
+class ProcessFirstWashAdmin(admin.ModelAdmin):
+    list_display = ["id","batch","machine","standard_time","loading_start","loading_started_by"]   
 
 # @admin.register(models.ProcessFirstWashHydro)
 # class ProcessFirstWashHydroAdmin(admin.ModelAdmin):

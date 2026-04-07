@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name
-from .models import Machine, Batch, BatchSource, InternalBatch, Rejection
+from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash
 from rest_framework import serializers
 
 class RejectionSerializer(serializers.ModelSerializer):
@@ -172,55 +172,55 @@ class MachineSerializer(serializers.ModelSerializer):
         model = Machine
         fields = ["machine_number","SAP","added_at"]
          
-# class ProcessFirstWashSerializer(serializers.ModelSerializer):
-#     batch = SimpleBatchSerializer(read_only=True)
-#     machine = MachineSerializer(read_only=True)
+class ProcessFirstWashSerializer(serializers.ModelSerializer):
+    batch = SimpleBatchSerializer(read_only=True)
+    machine = MachineSerializer(read_only=True)
     
-#     class Meta:
-#         model = ProcessFirstWash
-#         fields = ["id","batch","machine","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finished_by"]
+    class Meta:
+        model = ProcessFirstWash
+        fields = ["id","batch","machine","standard_time","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finished_by"]
 
-# class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ProcessFirstWash   
-#         fields = ["batch","machine"]
+class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessFirstWash   
+        fields = ["batch","machine","standard_time"]
         
-#     def create(self, validated_data):
-#         first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
-#         return first_wash
+    def create(self, validated_data):
+        first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
+        return first_wash
     
-# class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
-#     state = serializers.CharField(max_length=100, write_only=True)
+class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100, write_only=True)
     
-#     class Meta:
-#         model = ProcessFirstWash
-#         fields = ["state"]
+    class Meta:
+        model = ProcessFirstWash
+        fields = ["state"]
         
-#     def update(self, instance: ProcessFirstWash, validated_data):
-#         # Map of timestamp fields to the user field who completed them
-#         timestamp_to_user_field = {
-#             "loading_finish": "loading_finished_by",
-#             "process_finish": "process_finished_by",
-#             "unload_finish": "unload_finished_by"
-#         }
+    def update(self, instance: ProcessFirstWash, validated_data):
+        # Map of timestamp fields to the user field who completed them
+        timestamp_to_user_field = {
+            "loading_finish": "loading_finished_by",
+            "process_finish": "process_finished_by",
+            "unload_finish": "unload_finished_by"
+        }
 
-#         state_field = validated_data.get("state")
-#         if state_field not in timestamp_to_user_field:
-#             raise serializers.ValidationError("You have to provide a validated state")
+        state_field = validated_data.get("state")
+        if state_field not in timestamp_to_user_field:
+            raise serializers.ValidationError("You have to provide a validated state")
 
-#         # Check if the state has already been completed
-#         if getattr(instance, state_field) is not None:
-#             raise serializers.ValidationError("You've already completed this state")
+        # Check if the state has already been completed
+        if getattr(instance, state_field) is not None:
+            raise serializers.ValidationError("You've already completed this state")
 
-#         # Get the corresponding "finished by" field
-#         finished_by_field = timestamp_to_user_field[state_field]
+        # Get the corresponding "finished by" field
+        finished_by_field = timestamp_to_user_field[state_field]
 
-#         # Update timestamp and user who finished it
-#         setattr(instance, state_field, timezone.now())
-#         setattr(instance, finished_by_field, get_user_name(self.context["request"]))
-#         instance.save(update_fields=[state_field, finished_by_field])
+        # Update timestamp and user who finished it
+        setattr(instance, state_field, timezone.now())
+        setattr(instance, finished_by_field, get_user_name(self.context["request"]))
+        instance.save(update_fields=[state_field, finished_by_field])
 
-#         return instance
+        return instance
         
 # class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
 #     batch = SimpleBatchSerializer(read_only=True)
