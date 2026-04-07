@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
 from production.serializers import get_user_name
-from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash
+from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash, ProcessFirstWashHydro
 from rest_framework import serializers
 
 class RejectionSerializer(serializers.ModelSerializer):
@@ -222,42 +222,42 @@ class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
 
         return instance
         
-# class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
-#     batch = SimpleBatchSerializer(read_only=True)
+class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    batch = SimpleBatchSerializer(read_only=True)
     
-#     class Meta:
-#         model = ProcessFirstWashHydro
-#         fields = ["id","batch","machine","hydro_in","hydro_in_by","hydro_out","hydro_out_by"]
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["id","batch","machine","standard_time","hydro_in","hydro_in_by","hydro_out","hydro_out_by"]
         
-# class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = ProcessFirstWashHydro
-#         fields = ["batch","machine"]       
+class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["batch","machine","standard_time"]       
     
-#     def create(self, validated_data):
-#         first_wash_hydro = ProcessFirstWashHydro.objects.create(**validated_data,hydro_in_by=get_user_name(self.context["request"]))            
-#         return first_wash_hydro                               
+    def create(self, validated_data):
+        first_wash_hydro = ProcessFirstWashHydro.objects.create(**validated_data,hydro_in_by=get_user_name(self.context["request"]))            
+        return first_wash_hydro                               
 
-# class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
-#     state = serializers.CharField(max_length=100)
-#     class Meta:
-#         model = ProcessFirstWashHydro
-#         fields = ["state"]    
+class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
+    state = serializers.CharField(max_length=100)
+    class Meta:
+        model = ProcessFirstWashHydro
+        fields = ["state"]    
     
-#     def update(self, instance:ProcessFirstWashHydro, validated_data):
-#         state = validated_data["state"]
+    def update(self, instance:ProcessFirstWashHydro, validated_data):
+        state = validated_data["state"]
         
-#         if state != "hydro_out":
-#             raise serializers.ValidationError("You have to provide validated state")
+        if state != "hydro_out":
+            raise serializers.ValidationError("You have to provide validated state")
         
-#         if getattr(instance,state) is not None:
-#             raise serializers.ValidationError("You've already completed this state")
+        if getattr(instance,state) is not None:
+            raise serializers.ValidationError("You've already completed this state")
     
-#         instance.hydro_out = timezone.now()
-#         instance.hydro_out_by = get_user_name(self.context["request"])
-#         instance.save(update_fields=["hydro_out","hydro_out_by"])
+        instance.hydro_out = timezone.now()
+        instance.hydro_out_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["hydro_out","hydro_out_by"])
         
-#         return instance
+        return instance
     
 # class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
 #     # We will not take input for this field from the frontend.
