@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
@@ -55,13 +55,19 @@ class CreateRejectionSerializer(serializers.Serializer):
 
 class SimpleBatchSerializer(serializers.ModelSerializer):
     rejection_count = serializers.SerializerMethodField(method_name="get_rejection_count", read_only=True)
+    total_quantity = serializers.SerializerMethodField(method_name="get_total_quantity", read_only=True)
     class Meta: 
         model = Batch
-        fields = ["id", "buyer", "color", "shade", "stage", "type", "rejection_count"]
+        fields = ["id", "buyer", "color", "shade", "stage", "type", "rejection_count","total_quantity"]
     
     def get_rejection_count(self,instance:Batch):
             return instance.rejections.count()
-
+        
+    def get_total_quantity(self, instance: Batch):
+        return instance.sources.aggregate(
+            total=Sum("quantity")
+        )["total"] or 0        
+                
 class BatchQcSerializer(serializers.ModelSerializer):
     source = serializers.SerializerMethodField(method_name="get_source",read_only=True)
     batch = SimpleBatchSerializer(read_only=True)
