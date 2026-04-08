@@ -245,7 +245,7 @@ class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
         return first_wash_hydro                               
 
 class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
-    state = serializers.CharField(max_length=100)
+    state = serializers.CharField(max_length=100, write_only=True)
     class Meta:
         model = ProcessFirstWashHydro
         fields = ["state"]    
@@ -287,7 +287,7 @@ class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
         return first_wash_dryer        
    
 class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-    state = serializers.CharField(max_length=100)
+    state = serializers.CharField(max_length=100, write_only=True)
     
     class Meta:
         model= ProcessFirstWashDryer
