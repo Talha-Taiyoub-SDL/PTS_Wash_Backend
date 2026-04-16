@@ -9,6 +9,9 @@ class MasterPlan(models.Model):
     updated_by = models.CharField(max_length=100)
     last_update = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        unique_together = ["buyer", "style", "color"]
+    
 class PlanningRouteStep(models.Model):
     master_plan = models.ForeignKey(
         MasterPlan,
@@ -17,6 +20,9 @@ class PlanningRouteStep(models.Model):
     )
     sequence = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     stage = models.CharField(max_length=100)
+    
+    class Meta:
+        unique_together = ['master_plan', 'sequence']
 
     def __str__(self):
-        return f"{self.planning_id} - {self.sequence} - {self.stage}"    
+        return f"{self.master_plan.id} - {self.sequence} - {self.stage}"    
