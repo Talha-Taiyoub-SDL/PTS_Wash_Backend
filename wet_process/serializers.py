@@ -241,6 +241,12 @@ class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
         fields = ["batch","machine","standard_time"]       
     
     def create(self, validated_data):
+        # Check if Process First Wash is done or not
+        try:
+            ProcessFirstWash.objects.get(batch=validated_data["batch"])
+        except ProcessFirstWash.DoesNotExist:
+            raise serializers.ValidationError("You've to complete first wash cycle first")
+            
         first_wash_hydro = ProcessFirstWashHydro.objects.create(**validated_data,hydro_in_by=get_user_name(self.context["request"]))            
         return first_wash_hydro                               
 
@@ -283,6 +289,19 @@ class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
         return representation
     
     def create(self, validated_data):
+        # Check if Hydro is done or not
+        try:
+            ProcessFirstWashHydro.objects.get(batch=validated_data["batch"])
+        except ProcessFirstWashHydro.DoesNotExist:
+            raise serializers.ValidationError("You've to complete Hydro first")
+        
+        # Without completing tumble, you can't do oven or conve
+        # if validated_data["type"] == "oven" or "tumble":
+        #     try:
+        #         ProcessFirstWashDryer.objects.get(batch=validated_data["batch"])
+        #     except ProcessFirstWashDryer.DoesNotExist:
+        #         raise serializers.ValidationError("You've to complete Conveyor first")    
+        
         first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
         return first_wash_dryer        
    
