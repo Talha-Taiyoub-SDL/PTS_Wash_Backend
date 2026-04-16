@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'djoser',
     "accounts",
     "production",
-    "wet_process"
+    "wet_process",
+    "common"
 ]
 
 MIDDLEWARE = [
