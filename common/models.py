@@ -20,7 +20,7 @@ class MasterPlan(models.Model):
     def __str__(self):
         return f"{self.buyer}-{self.style}-{self.color}"    
     
-class PlanningRouteStep(models.Model):
+class RouteStep(models.Model):
     master_plan = models.ForeignKey(
         MasterPlan,
         on_delete=models.CASCADE,
@@ -41,8 +41,8 @@ class PlanningRouteStep(models.Model):
     def __str__(self):
         return f"{self.master_plan.id} - {self.sequence} - {self.stage}"
     
-class WetProcessRouteStep(models.Model):
-    planning = models.ForeignKey(PlanningRouteStep,on_delete=models.CASCADE,related_name="wet_process_route_steps")
+class WetProcessStep(models.Model):
+    planning = models.ForeignKey(RouteStep,on_delete=models.CASCADE,related_name="wet_process_steps")
     sequence = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     stage = models.CharField(max_length=100)
     
