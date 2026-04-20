@@ -3,13 +3,7 @@ from rest_framework import serializers
 from django.db import transaction
 from django.db.models import F, Max
 from django.utils import timezone
-
-def get_user_name(request):
-    return (
-        request.user.username
-        if request.user.is_authenticated
-        else "system"
-    )
+from common.utils import get_user_name
 
 class StageNameSerializer(serializers.ModelSerializer):
     class Meta:

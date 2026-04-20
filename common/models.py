@@ -33,7 +33,7 @@ class RouteStep(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["master_plan", "sequence"],
-                name="unique_planning_sequence"
+                name="unique_route_sequence"
             )
         ]
         ordering = ["sequence"]
@@ -41,19 +41,19 @@ class RouteStep(models.Model):
     def __str__(self):
         return f"{self.master_plan.id} - {self.sequence} - {self.stage}"
     
-class WetProcessStep(models.Model):
-    planning = models.ForeignKey(RouteStep,on_delete=models.CASCADE,related_name="wet_process_steps")
+class SubRouteStep(models.Model):
+    route_step = models.ForeignKey(RouteStep,on_delete=models.CASCADE,related_name="sub_steps")
     sequence = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     stage = models.CharField(max_length=100)
     
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["planning", "sequence"],
-                name = "unique_wet_process_sequence"
+                fields=["route_step", "sequence"],
+                name = "unique_sub_route_sequence"
             )    
         ] 
         ordering = ["sequence"]
         
         def __str__(self):
-            return f"{self.planning.id} - {self.sequence} - {self.stage}"       
+            return f"{self.route_step.id} - {self.sequence} - {self.stage}"       

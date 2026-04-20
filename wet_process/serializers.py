@@ -3,7 +3,7 @@ from django.db.models import F, Sum
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from production.models import Batch,ReceivedBundle
-from production.serializers import get_user_name
+from common.utils import get_user_name
 from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
 from rest_framework import serializers
 
