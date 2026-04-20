@@ -16,11 +16,6 @@ class Batch(models.Model):
     created_by = models.CharField(max_length=100)
     
     # Implementing reverse relationship so that it behaves similar to related_name of a normal ForeignKey.
-    # rejections = GenericRelation(
-    #     Rejection,
-    #     related_query_name="batch" # It will work like Rejection.objects.filter(batch_for_first_wash=1)
-    # )
-    
     # logs = GenericRelation(WashLog, related_query_name="batch") 
     
     def __str__(self):
