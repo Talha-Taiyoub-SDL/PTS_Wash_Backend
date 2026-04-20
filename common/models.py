@@ -10,7 +10,15 @@ class MasterPlan(models.Model):
     last_update = models.DateTimeField(auto_now=True)
     
     class Meta:
-        unique_together = ["buyer", "style", "color"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["buyer","style","color"],
+                name="unique_master_plan"
+            )
+        ]
+        
+    def __str__(self):
+        return f"{self.buyer}-{self.style}-{self.color}"    
     
 class PlanningRouteStep(models.Model):
     master_plan = models.ForeignKey(
@@ -22,7 +30,13 @@ class PlanningRouteStep(models.Model):
     stage = models.CharField(max_length=100)
     
     class Meta:
-        unique_together = ['master_plan', 'sequence']
+        constraints = [
+            models.UniqueConstraint(
+                fields=["master_plan", "sequence"],
+                name="unique_planning_sequence"
+            )
+        ]
+        ordering = ["sequence"]
 
     def __str__(self):
         return f"{self.master_plan.id} - {self.sequence} - {self.stage}"
@@ -33,4 +47,13 @@ class WetProcessRouteStep(models.Model):
     stage = models.CharField(max_length=100)
     
     class Meta:
-        unique_together = ["planning", "sequence"]        
+        constraints = [
+            models.UniqueConstraint(
+                fields=["planning", "sequence"],
+                name = "unique_wet_process_sequence"
+            )    
+        ] 
+        ordering = ["sequence"]
+        
+        def __str__(self):
+            return f"{self.planning.id} - {self.sequence} - {self.stage}"       
