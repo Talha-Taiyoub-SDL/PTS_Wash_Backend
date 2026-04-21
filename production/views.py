@@ -104,6 +104,16 @@ class ReceivedBundleViewSet(ModelViewSet):
 
         serializer = self.get_serializer(bundle)
         return Response(serializer.data)
+
+class BatchBundleViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = BatchBundle.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
+        return queryset
+    
+    serializer_class = serializers.BatchBundleSerializer
  
 class BatchViewSet(ModelViewSet):
     http_method_names = ["get","post","delete"]
