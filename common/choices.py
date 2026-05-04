@@ -8,3 +8,4 @@ class GarmentUnitStatus(models.TextChoices):
     BRUSH_IN = "brush_in", "Brush In"
     BRUSH_OUT = "brush_out", "Brush Out"
         
+       
