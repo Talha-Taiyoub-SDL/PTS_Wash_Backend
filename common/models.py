@@ -60,7 +60,7 @@ class SubRouteStep(models.Model):
             return f"{self.route_step.id} - {self.sequence} - {self.stage}"       
         
 class GarmentUnit(models.Model):
-    individual_barcode = models.CharField(max_length=100, unique=True)
+    individual_barcode = models.CharField(max_length=100, primary_key=True)
     so = models.CharField(max_length=100)
     mpo = models.CharField(max_length=100)
     buyer = models.CharField(max_length=100)
