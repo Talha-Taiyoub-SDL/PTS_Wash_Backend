@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import MasterPlan, RouteStep, SubRouteStep
+from .models import MasterPlan, RouteStep, SubRouteStep, GarmentUnit
 from .utils import get_user_name
 
 class SubRouteStepSerializer(serializers.ModelSerializer):
@@ -49,6 +49,12 @@ class CreateMasterPlanSerializer(serializers.ModelSerializer):
                     
             return master_plan                    
                 
+class GarmentUnitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GarmentUnit
+        fields = ["id", "individual_barcode", "so", "mpo", "buyer", "style", "marker", "size", "shade", "color", "status", "received_at", "received_by"]                
                 
-                
+    def create(self, validated_data):
+        garment_unit = GarmentUnit.objects.create(**validated_data, received_by=get_user_name(self.context["request"]))
+        return garment_unit            
                 
