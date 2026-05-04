@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from .choices import GarmentUnitStatus
 
 # Create your models here.
 class MasterPlan(models.Model):
@@ -57,3 +58,26 @@ class SubRouteStep(models.Model):
         
         def __str__(self):
             return f"{self.route_step.id} - {self.sequence} - {self.stage}"       
+        
+class GarmentUnit(models.Model):
+    individual_barcode = models.CharField(max_length=100, unique=True)
+    so = models.CharField(max_length=100)
+    mpo = models.CharField(max_length=100)
+    buyer = models.CharField(max_length=100)
+    style = models.CharField(max_length=100)
+    marker = models.CharField(max_length=100)
+    size = models.CharField(max_length=50)
+    shade = models.CharField(max_length=50)
+    color = models.CharField(max_length=50)
+    
+    status = models.CharField(
+        max_length=100,
+        choices=GarmentUnitStatus.choices,
+        default=GarmentUnitStatus.RECEIVED,
+    )
+    received_at = models.DateTimeField(auto_now_add=True)
+    received_by = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.individual_barcode} - {self.mpo} - {self.color}"
+                    
