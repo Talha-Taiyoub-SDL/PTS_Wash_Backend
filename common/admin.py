@@ -14,3 +14,6 @@ class RouteStepAdmin(admin.ModelAdmin):
 class SubRouteStepAdmin(admin.ModelAdmin):
     list_display = ["id", "route_step", "sequence", "stage"]        
 
+@admin.register(models.GarmentUnit)
+class GarmentUnitAdmin(admin.ModelAdmin):
+    list_display = ["individual_barcode", "so", "mpo", "buyer", "style", "marker", "size", "shade", "color", "status", "received_at", "received_by"]
