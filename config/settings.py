@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     "accounts",
     "production",
     "wet_process",
-    "common"
+    "common",
+    "dry_process"
 ]
 
 MIDDLEWARE = [
