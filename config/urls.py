@@ -24,4 +24,5 @@ urlpatterns = [
     path("productions/",include("production.urls")),
     path("wet-process/",include("wet_process.urls")),
     path("common/",include("common.urls")),
+    path("dry-process/",include("dry_process.urls")),
 ]
