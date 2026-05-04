@@ -1,8 +1,8 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework import status
-from .models import MasterPlan
-from .serializers import CreateMasterPlanSerializer, MasterPlanSerializer
+from .models import MasterPlan, GarmentUnit
+from .serializers import CreateMasterPlanSerializer, MasterPlanSerializer, GarmentUnitSerializer
 
 class MasterPlanViewSet(ModelViewSet):    
     def get_queryset(self):
@@ -34,5 +34,7 @@ class MasterPlanViewSet(ModelViewSet):
         serializer = MasterPlanSerializer(master_plan)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-
-
+class GarmentUnitViewSet(ModelViewSet):
+    queryset = GarmentUnit.objects.all()
+    serializer_class = GarmentUnitSerializer
+    
