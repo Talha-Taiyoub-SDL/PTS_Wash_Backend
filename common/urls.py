@@ -4,6 +4,7 @@ from . import views
 
 router = DefaultRouter()
 router.register("master-plans",views.MasterPlanViewSet,basename="master-plan")
+router.register("garment-units", views.GarmentUnitViewSet, basename="garment-unit")
 
 urlpatterns = [
     path("",include(router.urls))
