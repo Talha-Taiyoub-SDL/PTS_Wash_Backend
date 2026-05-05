@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from .choices import Stage
 
 # Create your models here.
 
@@ -25,7 +26,7 @@ class PlanningRouteStep(models.Model):
         related_name='route_steps'
     )
     sequence = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    stage = models.CharField(max_length=100)
+    stage = models.CharField(max_length=100, choices=Stage.choices)
 
     class Meta:
         unique_together = [
