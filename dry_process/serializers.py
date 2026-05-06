@@ -59,6 +59,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
     
     # Use this function to create history and update garment unit's status
     def create_history(self, stage, action, garment_unit):
+        with transaction.atomic():
             history = TrackingHistory.objects.create(**self.validated_data, operator=get_user_name(self.context["request"]))
             
             # Update garment unit's status
@@ -93,33 +94,34 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         except Planning.DoesNotExist:
             raise serializers.ValidationError({"garment_unit": "Planning does not exist for the MPO this garment belongs to"})
             
-        with transaction.atomic():
-            if action == Action.IN:
-                # Whent it's the first stage, the garment unit's status must have to be "received"
-                if route_step.sequence == 1:
-                    if garment_unit.status == "received":
-                        return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
-                    else:
-                        raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
-                    
-                # If it's not the first stage, then previous stage's out action should be completed    
-                elif garment_unit.status == planning.route_steps.get(sequence=(route_step.sequence-1)).stage + "_" + Action.OUT:
-                    return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
-                
-                else:
-                    raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
-                                             
-            elif action == Action.OUT:
-                if garment_unit.status == route_step.stage + "_" + Action.IN:
+        # Create History for the specified action
+        if action == Action.IN:
+            
+            # Whent it's the first stage, the garment unit's status must have to be "received"
+            if route_step.sequence == 1:
+                if garment_unit.status == "received":
                     return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
                 else:
                     raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
                 
-            elif action == Action.REJECTED:
-                if garment_unit.status == route_step.stage + "_" + Action.IN:
-                    return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
-                else:
-                    raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
+            # If it's not the first stage, then previous stage's out action should be completed    
+            elif garment_unit.status == planning.route_steps.get(sequence=(route_step.sequence-1)).stage + "_" + Action.OUT:
+                return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
+            
+            else:
+                raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
+                                            
+        elif action == Action.OUT:
+            if garment_unit.status == route_step.stage + "_" + Action.IN:
+                return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
+            else:
+                raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
+            
+        elif action == Action.REJECTED:
+            if garment_unit.status == route_step.stage + "_" + Action.IN:
+                return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
+            else:
+                raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
                 
             
                 
