@@ -124,5 +124,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
                 
             
-                
+class RejectionSerializer(serializers.Serializer):
+    garment_units = serializers.ListField()
+    stage = serializers.CharField()                
              
