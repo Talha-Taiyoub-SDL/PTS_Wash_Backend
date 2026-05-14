@@ -104,7 +104,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 else:
                     raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
                 
-            # If it's not the first stage, then previous stage's out action should be completed    
+            # If it's not the first stage, then previous stage's out action must have to be completed    
             elif garment_unit.status == planning.route_steps.get(sequence=(route_step.sequence-1)).stage + "_" + Action.OUT:
                 return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
             
