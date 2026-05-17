@@ -4,6 +4,7 @@ from . import views
 
 router = DefaultRouter()
 router.register("tracking-histories", views.TrackingHistoryViewSet, basename="tracking-history")
+router.register("rejections", views.RejectionViewSet, basename="rejection")
 
 urlpatterns = [
     path("",include(router.urls))
