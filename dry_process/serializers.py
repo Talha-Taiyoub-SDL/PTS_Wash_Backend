@@ -1,10 +1,11 @@
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from .models import TrackingHistory
-from .choices import Action
+from .choices import Action, RejectionReason
 from rest_framework import serializers
 from common.utils import get_user_name
 from production.models import Planning, PlanningRouteStep
+from common.models import GarmentUnit
 
 class TrackingHistorySerializer(serializers.ModelSerializer): 
     class Meta:
@@ -122,9 +123,51 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 return self.create_history(stage=stage, action=action, garment_unit=garment_unit)
             else:
                 raise serializers.ValidationError({"stage": "Please complete the stages accordingly"})
-                
+
+class RejectionItemSerializer(serializers.Serializer):
+    garment_unit = serializers.PrimaryKeyRelatedField(queryset=GarmentUnit.objects.exclude(status=Action.REJECTED))
+    rejection_reason = serializers.ChoiceField(choices=RejectionReason.choices)          
             
 class RejectionSerializer(serializers.Serializer):
-    garment_units = serializers.ListField()
-    stage = serializers.CharField()                
+    rejection_items = RejectionItemSerializer(many=True)
+    stage = serializers.CharField(max_length=100)
+
+    def create(self, validated_data):
+        stage = validated_data["stage"]
+        rejection_items = validated_data["rejection_items"]
+        
+        # grab all the rejected garment units' barcodes
+        barcode_list = [
+            rejection_item["garment_unit"].individual_barcode
+            for rejection_item in rejection_items
+        ]
+        
+        histories = [
+            TrackingHistory(
+                garment_unit=rejection_item["garment_unit"],
+                stage=stage,
+                action=Action.REJECTED,
+                rejection_reason=rejection_item["rejection_reason"],
+                operator=get_user_name(self.context["request"])
+            )
+            for rejection_item in rejection_items
+        ]
+        
+        try:
+            with transaction.atomic():
+                TrackingHistory.objects.bulk_create(histories)
+                
+                # Update the garment units status to rejected
+                GarmentUnit.objects.filter(
+                    individual_barcode__in=barcode_list
+                ).update(status=Action.REJECTED)
+
+                return histories
+
+        except IntegrityError:
+            raise serializers.ValidationError({
+                "non_field_errors": [
+                    "One or more garments are already rejected for this stage."
+                ]
+            })      
              
