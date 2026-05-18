@@ -151,7 +151,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
 
 class RejectionItemSerializer(serializers.Serializer):
     garment_unit = serializers.PrimaryKeyRelatedField(
-        queryset=GarmentUnit.objects.exclude(status=Action.REJECTED)
+        queryset=GarmentUnit.objects.all()
     )
     rejection_reason = serializers.ChoiceField(choices=RejectionReason.choices)
 
