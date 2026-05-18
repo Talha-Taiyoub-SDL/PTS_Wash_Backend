@@ -51,13 +51,8 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 }
             )
 
-        # If the action is "rejected", rejection_reason must be included, otherwise not
+        # If the action is not "rejected", rejection_reason must not be included. Rejection is not allowed in this endpoint, it is handled in a separate endpoint.
         rejection_reason = data.get("rejection_reason")
-
-        if action == Action.REJECTED and not rejection_reason:
-            raise serializers.ValidationError(
-                {"rejection_reason": "This field is required when action is REJECTED."}
-            )
 
         if action != Action.REJECTED and rejection_reason:
             raise serializers.ValidationError(
@@ -74,10 +69,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
             )
 
             # Update garment unit's status
-            if action == Action.REJECTED:
-                status = Action.REJECTED
-            else:
-                status = stage + "_" + action
+            status = stage + "_" + action
 
             garment_unit.status = status
             garment_unit.save(update_fields=["status"])
@@ -141,6 +133,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 )
 
         elif action == Action.OUT:
+            # For out action, the garment unit's status must have to be the same stage with IN action
             if garment_unit.status == route_step.stage + "_" + Action.IN:
                 return self.create_history(
                     stage=stage, action=action, garment_unit=garment_unit
@@ -151,14 +144,9 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 )
 
         elif action == Action.REJECTED:
-            if garment_unit.status == route_step.stage + "_" + Action.IN:
-                return self.create_history(
-                    stage=stage, action=action, garment_unit=garment_unit
-                )
-            else:
-                raise serializers.ValidationError(
-                    {"stage": "Please complete the stages accordingly"}
-                )
+            raise serializers.ValidationError(
+                {"action": "Invalid action. Rejection is not allowed in this endpoint."}
+            )
 
 
 class RejectionItemSerializer(serializers.Serializer):
