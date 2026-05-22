@@ -31,7 +31,7 @@ class Batch(models.Model):
     type = models.CharField(max_length=20, choices=BatchType.choices)
 
     status = models.CharField(
-        max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING
+        max_length=20, choices=BatchStatus.choices, default=BatchStatus.READY_TO_WASH
     )
     total_quantity = models.PositiveIntegerField(default=0)
     total_rewash_quantity = models.PositiveIntegerField(default=0)

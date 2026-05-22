@@ -31,7 +31,7 @@ class BatchType(models.TextChoices):
 
 
 class BatchStatus(models.TextChoices):
-    PENDING = "pending", "Pending"
+    READY_TO_WASH = "ready_to_wash", "Ready To Wash"
     IN_PROGRESS = "in_progress", "In Progress"
     COMPLETED = "completed", "Completed"
 
