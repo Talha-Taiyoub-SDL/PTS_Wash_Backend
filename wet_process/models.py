@@ -1,72 +1,136 @@
-from django.db import models
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.db import models, transaction
+from django.utils import timezone
 from django.core.validators import MinValueValidator
-from production.models import ReceivedBundle
-from .choices import BatchStage, BatchType
+from .choices import BatchStage, BatchType, BatchStatus
+from common.models import GarmentUnit
 
-# New batches are started from this place.
+
+class BatchSequence(models.Model):
+    year = models.PositiveIntegerField()
+    stage = models.CharField(max_length=20, choices=BatchStage.choices)
+    type = models.CharField(max_length=20, choices=BatchType.choices)
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["year", "stage", "type"], name="unique_year_stage_type"
+            )
+        ]
+
+    def __str__(self):
+        return str(self.year)
+
+
 class Batch(models.Model):
+    id = models.CharField(max_length=100, primary_key=True)
     buyer = models.CharField(max_length=100)
     color = models.CharField(max_length=100)
     shade = models.CharField(max_length=50)
     stage = models.CharField(max_length=20, choices=BatchStage.choices)
     type = models.CharField(max_length=20, choices=BatchType.choices)
+
+    status = models.CharField(
+        max_length=20, choices=BatchStatus.choices, default=BatchStatus.PENDING
+    )
+    total_quantity = models.PositiveIntegerField(default=0)
+    total_rewash_quantity = models.PositiveIntegerField(default=0)
+    total_rejection_quantity = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.CharField(max_length=100)
-    
-    # Implementing reverse relationship so that it behaves similar to related_name of a normal ForeignKey.
-    # logs = GenericRelation(WashLog, related_query_name="batch") 
-    
+    operator = models.CharField(max_length=100)
+
+    def save(self, *args, **kwargs):
+
+        # with tranction.atomic we're enabling that batch creation and batch sequence generation happens at once
+        with transaction.atomic():
+            if not self.id:
+                self.id = self.generate_batch_id()
+
+            super().save(*args, **kwargs)
+
+    def generate_batch_id(self):
+        current_year = timezone.now().year
+        short_year = str(current_year)[-2:]
+
+        plant_number = "W822"
+
+        # select_for_update means lock this row until I finish my task/transaction
+        sequence, _ = BatchSequence.objects.select_for_update().get_or_create(
+            year=current_year, stage=self.stage, type=self.type
+        )
+        sequence.last_number += 1
+        sequence.save(update_fields=["last_number"])
+        sequence_number = str(sequence.last_number).zfill(7)
+
+        stage_code = BatchStage.get_stage_map().get(self.stage)
+        type_code = BatchType.get_type_map().get(self.type)
+
+        return f"{plant_number}Y{short_year}W{stage_code}{type_code}{sequence_number}"
+
     def __str__(self):
-        return f"{self.id}"  
-    
-class InternalBatch(models.Model):
-    mpo = models.CharField(max_length=100)
-    style = models.CharField(max_length=100)
-    so = models.CharField(max_length=100)      
-    
-    class Meta:
-        unique_together = ["mpo","style","so"]
-    
+        return f"{self.id}"
+
+
 class BatchSource(models.Model):
     batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="sources")
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE) 
-    object_id = models.PositiveIntegerField(validators=[MinValueValidator(1)])
-    
-    source_object = GenericForeignKey(
-        "content_type",
-        "object_id"
-    )
+    mpo = models.CharField(max_length=100)
+    style = models.CharField(max_length=100)
+    so = models.CharField(max_length=100)
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     rewash_quantity = models.PositiveIntegerField(default=0)
+    rejection_quantity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["batch", "mpo"], name="unique_batch_mpo")
+        ]
+
+
+class BatchSourcePiece(models.Model):
+    batch_source = models.ForeignKey(
+        BatchSource, on_delete=models.CASCADE, related_name="pieces"
+    )
+    garment_unit = models.ForeignKey(GarmentUnit, on_delete=models.CASCADE)
+
+    class Meta:
+        # To use piece in second wash or rewash just add batch_source in the fields as constraint
+        constraints = [
+            models.UniqueConstraint(
+                fields=["garment_unit"],
+                name="unique_garment_unit",
+            )
+        ]
+
 
 class Machine(models.Model):
     machine_number = models.IntegerField(
-        primary_key=True,
-        validators=[MinValueValidator(1)]
+        primary_key=True, validators=[MinValueValidator(1)]
     )
     SAP = models.CharField(max_length=100)
     added_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
         return f"{self.machine_number}-{self.SAP}"
-    
+
+
 class Rejection(models.Model):
     # Copy the barcode of the individual garment
     individual_barcode = models.CharField(max_length=100, unique=True)
-    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="rejections")
+    batch = models.ForeignKey(
+        Batch, on_delete=models.CASCADE, related_name="rejections"
+    )
     reason = models.CharField(max_length=100)
     rejected_at = models.DateTimeField(auto_now=True)
-    rejected_by = models.CharField(max_length=100)  
-        
+    rejected_by = models.CharField(max_length=100)
+
+
 # class WashLog(models.Model):
 #     content_type = models.ForeignKey(
 #         ContentType,
 #         on_delete=models.PROTECT
 #     )
 #     object_id = models.PositiveIntegerField()
-    
+
 #     # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
 #     source_batch = GenericForeignKey(
 #         "content_type",
@@ -77,21 +141,17 @@ class Rejection(models.Model):
 #     rewash_quantity = models.PositiveIntegerField(default=0)
 #     remaining_rewash_quantity = models.PositiveIntegerField(default=0)
 #     status = models.CharField(max_length=100, null=True, blank=True)
-    
+
 #     class Meta:
 #         unique_together = [("content_type","object_id")]
-             
+
+
 class ProcessFirstWash(models.Model):
     batch = models.OneToOneField(
-        Batch,
-        on_delete=models.CASCADE,
-        related_name="process_first_wash"
+        Batch, on_delete=models.CASCADE, related_name="process_first_wash"
     )
-    
-    machine = models.ForeignKey(
-        Machine,
-        on_delete=models.PROTECT
-    )
+
+    machine = models.ForeignKey(Machine, on_delete=models.PROTECT)
     standard_time = models.DurationField()
 
     # Loading
@@ -101,51 +161,51 @@ class ProcessFirstWash(models.Model):
     loading_finish = models.DateTimeField(null=True, blank=True)
     loading_finished_by = models.CharField(max_length=100, null=True, blank=True)
 
-    # Loading is finished means process is automatically started 
+    # Loading is finished means process is automatically started
     process_finish = models.DateTimeField(null=True, blank=True)
     process_finished_by = models.CharField(max_length=100, null=True, blank=True)
 
     # Process is finished means unloading is automatically started
     unload_finish = models.DateTimeField(null=True, blank=True)
     unload_finished_by = models.CharField(max_length=100, null=True, blank=True)
-   
+
+
 class ProcessFirstWashHydro(models.Model):
-    batch = models.OneToOneField(Batch, on_delete=models.CASCADE, related_name="process_first_wash_hydro")
+    batch = models.OneToOneField(
+        Batch, on_delete=models.CASCADE, related_name="process_first_wash_hydro"
+    )
     machine = models.ForeignKey(Machine, on_delete=models.PROTECT)
     standard_time = models.DurationField()
-    
+
     # Hydro In
     hydro_in = models.DateTimeField(auto_now_add=True)
     hydro_in_by = models.CharField(max_length=100)
-    
-    #Hydro Out
-    hydro_out = models.DateTimeField(null=True,blank=True)
-    hydro_out_by = models.CharField(max_length=100, null=True,blank=True)
+
+    # Hydro Out
+    hydro_out = models.DateTimeField(null=True, blank=True)
+    hydro_out_by = models.CharField(max_length=100, null=True, blank=True)
+
 
 class ProcessFirstWashDryer(models.Model):
     CONVEYOR = "conveyor"
     OVEN = "oven"
     TUMBLE = "tumble"
-    
-    TYPE_CHOICES = [(CONVEYOR,"Conveyor"),(OVEN,"Oven"),(TUMBLE,"Tumble")]
-    
-    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="first_wash_dryer_processes")
-    machine  = models.ForeignKey(Machine,on_delete=models.PROTECT, related_name = "first_wash_dryer_processes")
+
+    TYPE_CHOICES = [(CONVEYOR, "Conveyor"), (OVEN, "Oven"), (TUMBLE, "Tumble")]
+
+    batch = models.ForeignKey(
+        Batch, on_delete=models.CASCADE, related_name="first_wash_dryer_processes"
+    )
+    machine = models.ForeignKey(
+        Machine, on_delete=models.PROTECT, related_name="first_wash_dryer_processes"
+    )
     standard_time = models.DurationField()
-    
+
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     dryer_in = models.DateTimeField(auto_now_add=True)
     dryer_in_by = models.CharField(max_length=100)
-    dryer_out = models.DateTimeField(null=True,blank=True)
-    dryer_out_by = models.CharField(max_length=100,null=True,blank=True)
-    
+    dryer_out = models.DateTimeField(null=True, blank=True)
+    dryer_out_by = models.CharField(max_length=100, null=True, blank=True)
+
     class Meta:
-        unique_together = [("batch","type")]
-
-
-
-    
-    
-
-                          
-           
+        unique_together = [("batch", "type")]

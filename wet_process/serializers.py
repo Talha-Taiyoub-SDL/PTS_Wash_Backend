@@ -1,16 +1,34 @@
 from django.db import transaction
-from django.db.models import F, Sum
+from django.db.models import Sum
 from django.utils import timezone
-from django.contrib.contenttypes.models import ContentType
-from production.models import Batch,ReceivedBundle
+from common.models import GarmentUnit
+from .choices import BatchInputType
 from common.utils import get_user_name
-from .models import Machine, Batch, BatchSource, InternalBatch, Rejection, ProcessFirstWash, ProcessFirstWashHydro, ProcessFirstWashDryer
+from .models import (
+    Machine,
+    Batch,
+    BatchSource,
+    BatchSourcePiece,
+    Rejection,
+    ProcessFirstWash,
+    ProcessFirstWashHydro,
+    ProcessFirstWashDryer,
+)
 from rest_framework import serializers
+
 
 class RejectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rejection
-        fields= ["id", "individual_barcode", "batch", "reason", "rejected_at", "rejected_by"]
+        fields = [
+            "id",
+            "individual_barcode",
+            "batch",
+            "reason",
+            "rejected_at",
+            "rejected_by",
+        ]
+
 
 class CreateRejectionSerializer(serializers.Serializer):
     batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
@@ -20,194 +38,269 @@ class CreateRejectionSerializer(serializers.Serializer):
         batch = validated_data["batch"]
         rejections = validated_data["rejections"]
         user = get_user_name(self.context["request"])
-        
+
         barcodes = [r["individual_barcode"] for r in rejections]
 
         # check duplicates in payload
         if len(barcodes) != len(set(barcodes)):
-            raise serializers.ValidationError({
-                "rejections": "Duplicate individual_barcode found in request."
-            })
+            raise serializers.ValidationError(
+                {"rejections": "Duplicate individual_barcode found in request."}
+            )
 
         # check duplicates in DB
         existing = set(
-            Rejection.objects.filter(
-                individual_barcode__in=barcodes
-            ).values_list("individual_barcode", flat=True)
+            Rejection.objects.filter(individual_barcode__in=barcodes).values_list(
+                "individual_barcode", flat=True
+            )
         )
 
         if existing:
-            raise serializers.ValidationError({
-                "rejections": f"These barcodes already exist: {list(existing)}"
-            })
+            raise serializers.ValidationError(
+                {"rejections": f"These barcodes already exist: {list(existing)}"}
+            )
 
         objects = [
-            Rejection(
-                batch=batch,
-                rejected_by=user,
-                **rejection
-            )
+            Rejection(batch=batch, rejected_by=user, **rejection)
             for rejection in rejections
         ]
 
         created = Rejection.objects.bulk_create(objects)
         return created
 
+
 class SimpleBatchSerializer(serializers.ModelSerializer):
-    rejection_count = serializers.SerializerMethodField(method_name="get_rejection_count", read_only=True)
-    total_quantity = serializers.SerializerMethodField(method_name="get_total_quantity", read_only=True)
-    class Meta: 
+    rejection_count = serializers.SerializerMethodField(
+        method_name="get_rejection_count", read_only=True
+    )
+    total_quantity = serializers.SerializerMethodField(
+        method_name="get_total_quantity", read_only=True
+    )
+
+    class Meta:
         model = Batch
-        fields = ["id", "buyer", "color", "shade", "stage", "type", "rejection_count","total_quantity"]
-    
-    def get_rejection_count(self,instance:Batch):
-            return instance.rejections.count()
-        
+        fields = [
+            "id",
+            "buyer",
+            "color",
+            "shade",
+            "stage",
+            "type",
+            "rejection_count",
+            "total_quantity",
+        ]
+
+    def get_rejection_count(self, instance: Batch):
+        return instance.rejections.count()
+
     def get_total_quantity(self, instance: Batch):
-        return instance.sources.aggregate(
-            total=Sum("quantity")
-        )["total"] or 0        
-                
+        return instance.sources.aggregate(total=Sum("quantity"))["total"] or 0
+
+
 class BatchQcSerializer(serializers.ModelSerializer):
-    source = serializers.SerializerMethodField(method_name="get_source",read_only=True)
+    source = serializers.SerializerMethodField(method_name="get_source", read_only=True)
     batch = SimpleBatchSerializer(read_only=True)
-    
+
     class Meta:
         model = BatchSource
-        fields = ["source","batch","quantity","rewash_quantity"]
+        fields = ["source", "batch", "quantity", "rewash_quantity"]
         read_only_fields = ["source", "quantity"]
-    
-    def get_source(self, instance:BatchSource):
+
+    def get_source(self, instance: BatchSource):
         return {
             "id": instance.id,
             "mpo": instance.source_object.mpo,
             "style": instance.source_object.style,
-            "so": instance.source_object.so   
+            "so": instance.source_object.so,
         }
-    
-    def update(self, instance:BatchSource, validated_data):
+
+    def update(self, instance: BatchSource, validated_data):
         instance.rewash_quantity = validated_data["rewash_quantity"]
         instance.save(update_fields=["rewash_quantity"])
         return instance
-        
+
+
 class BatchSourceInputSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=["internal","bundle"])
-    id = serializers.IntegerField(required=False)
-    
+    # When the input type is aggregate, then mpo, style, so, and quantity is needed.
     mpo = serializers.CharField(required=False)
     style = serializers.CharField(required=False)
     so = serializers.CharField(required=False)
-    
-    quantity = serializers.IntegerField()
-    
+    quantity = serializers.IntegerField(required=False)
+
+    # When the input type is pieces, then only garment_unit is needed
+    garment_unit = serializers.PrimaryKeyRelatedField(
+        queryset=GarmentUnit.objects.all(), required=False
+    )
+
+
 class BatchSourceSerializer(serializers.ModelSerializer):
-    source = serializers.SerializerMethodField(method_name="get_source", read_only=True)
-    
     class Meta:
         model = BatchSource
-        fields = ["id","source","quantity"]
+        fields = [
+            "id",
+            "mpo",
+            "style",
+            "so",
+            "quantity",
+            "rewash_quantity",
+            "rejection_quantity",
+        ]
         read_only_fields = ["batch"]
-    
-    def get_source(self, instance:BatchSource):
-        return {
-            "mpo": instance.source_object.mpo,
-            "style": instance.source_object.style,
-            "so": instance.source_object.so   
-        }
- 
+
+
 class BatchSerializer(serializers.ModelSerializer):
     sources = BatchSourceSerializer(many=True, read_only=True)
-    sources_input = BatchSourceInputSerializer(many=True, write_only=True)
-    
+
+    input_type = serializers.ChoiceField(
+        choices=BatchInputType.choices, write_only=True
+    )
+    input_sources = BatchSourceInputSerializer(many=True, write_only=True)
+
     class Meta:
         model = Batch
-        fields = ["id", "buyer", "color", "shade", "stage", "type", "created_at", "created_by", "sources", "sources_input"]
-        read_only_fields = ["created_by"]
-        
+        fields = [
+            "id",
+            "buyer",
+            "color",
+            "shade",
+            "stage",
+            "type",
+            "status",
+            "total_quantity",
+            "total_rewash_quantity",
+            "total_rejection_quantity",
+            "created_at",
+            "operator",
+            "sources",
+            "input_type",
+            "input_sources",
+        ]
+        read_only_fields = ["id", "operator"]
+
     def create(self, validated_data):
-        sources_data = validated_data.pop("sources_input", [])
-        if not sources_data:
-            raise serializers.ValidationError({
-                "sources_input": "At least one source is required to create a batch."
-            })
-        
+        input_type = validated_data.pop("input_type")
+        input_sources = validated_data.pop("input_sources", [])
+
+        if not input_sources:
+            raise serializers.ValidationError(
+                {"input_sources": "At least one source is required to create a batch."}
+            )
+
         with transaction.atomic():
-            batch = Batch.objects.create(**validated_data, created_by=get_user_name(self.context["request"]))
-            
-            for source in sources_data:
-                source_type = source["type"]
-                quantity = source["quantity"]
+            batch = Batch.objects.create(
+                **validated_data, operator=get_user_name(self.context["request"])
+            )
 
-                if source_type == "bundle":
-                    try:
-                        bundle = ReceivedBundle.objects.get(id=source["id"])
-                    except ReceivedBundle.DoesNotExist:
-                        raise serializers.ValidationError({
-                            "sources_input": f"Bundle with id {source['id']} does not exist."
-                        }) 
-                    content_type = ContentType.objects.get_for_model(ReceivedBundle)
-
-                    BatchSource.objects.create(
+            if input_type == BatchInputType.AGGREGATE:
+                batch_sources = [
+                    BatchSource(
                         batch=batch,
-                        content_type=content_type,
-                        object_id=bundle.id,
-                        quantity=quantity
-                    )
-
-                elif source_type == "internal":
-                    internal, created = InternalBatch.objects.get_or_create(
                         mpo=source["mpo"],
                         style=source["style"],
-                        so=source["so"]
+                        so=source["so"],
+                        quantity=source["quantity"],
                     )
-                    content_type = ContentType.objects.get_for_model(InternalBatch)
+                    for source in input_sources
+                ]
 
-                    BatchSource.objects.create(
+                BatchSource.objects.bulk_create(batch_sources)
+
+            # When input type is pieces
+            else:
+                grouped_sources = []
+                group_map = {}
+
+                for source in input_sources:
+                    garment_unit = source["garment_unit"]
+
+                    key = (garment_unit.mpo, garment_unit.style, garment_unit.so)
+
+                    if key not in group_map:
+                        group_map[key] = {
+                            "mpo": garment_unit.mpo,
+                            "style": garment_unit.style,
+                            "so": garment_unit.so,
+                            "garment_units": [],
+                        }
+
+                        grouped_sources.append(group_map[key])
+
+                    group_map[key]["garment_units"].append(garment_unit)
+
+                for grouped_source in grouped_sources:
+                    batch_source = BatchSource.objects.create(
                         batch=batch,
-                        content_type=content_type,
-                        object_id=internal.id,
-                        quantity=quantity
+                        mpo=grouped_source["mpo"],
+                        style=grouped_source["style"],
+                        so=grouped_source["so"],
+                        quantity=len(grouped_source["garment_units"]),
                     )
 
-            return batch    
-        
-        
-# Below is the line 
+                    for garment_unit in grouped_source["garment_units"]:
+                        BatchSourcePiece.objects.create(
+                            batch_source=batch_source, garment_unit=garment_unit
+                        )
+
+            total = batch.sources.aggregate(total=Sum("quantity"))["total"]
+            batch.total_quantity = total
+            batch.save(update_fields=["total_quantity"])
+
+            return batch
+
+
+# Below is the line
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
-        fields = ["machine_number","SAP","added_at"]
-         
+        fields = ["machine_number", "SAP", "added_at"]
+
+
 class ProcessFirstWashSerializer(serializers.ModelSerializer):
     batch = SimpleBatchSerializer(read_only=True)
     machine = MachineSerializer(read_only=True)
-    
+
     class Meta:
         model = ProcessFirstWash
-        fields = ["id","batch","machine","standard_time","loading_start","loading_started_by","loading_finish","loading_finished_by","process_finish","process_finished_by","unload_finish","unload_finished_by"]
+        fields = [
+            "id",
+            "batch",
+            "machine",
+            "standard_time",
+            "loading_start",
+            "loading_started_by",
+            "loading_finish",
+            "loading_finished_by",
+            "process_finish",
+            "process_finished_by",
+            "unload_finish",
+            "unload_finished_by",
+        ]
+
 
 class CreateProcessFirstWashSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ProcessFirstWash   
-        fields = ["batch","machine","standard_time"]
-        
+        model = ProcessFirstWash
+        fields = ["batch", "machine", "standard_time"]
+
     def create(self, validated_data):
-        first_wash = ProcessFirstWash.objects.create(**validated_data,loading_started_by = get_user_name(self.context["request"]))
+        first_wash = ProcessFirstWash.objects.create(
+            **validated_data, loading_started_by=get_user_name(self.context["request"])
+        )
         return first_wash
-    
+
+
 class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
     state = serializers.CharField(max_length=100, write_only=True)
-    
+
     class Meta:
         model = ProcessFirstWash
         fields = ["state"]
-        
+
     def update(self, instance: ProcessFirstWash, validated_data):
         # Map of timestamp fields to the user field who completed them
         timestamp_to_user_field = {
             "loading_finish": "loading_finished_by",
             "process_finish": "process_finished_by",
-            "unload_finish": "unload_finished_by"
+            "unload_finish": "unload_finished_by",
         }
 
         state_field = validated_data.get("state")
@@ -227,113 +320,142 @@ class UpdateProcessFirstWashSerializer(serializers.ModelSerializer):
         instance.save(update_fields=[state_field, finished_by_field])
 
         return instance
-        
+
+
 class ProcessFirstWashHydroSerializer(serializers.ModelSerializer):
     batch = SimpleBatchSerializer(read_only=True)
-    
+
     class Meta:
         model = ProcessFirstWashHydro
-        fields = ["id","batch","machine","standard_time","hydro_in","hydro_in_by","hydro_out","hydro_out_by"]
-        
+        fields = [
+            "id",
+            "batch",
+            "machine",
+            "standard_time",
+            "hydro_in",
+            "hydro_in_by",
+            "hydro_out",
+            "hydro_out_by",
+        ]
+
+
 class CreateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProcessFirstWashHydro
-        fields = ["batch","machine","standard_time"]       
-    
+        fields = ["batch", "machine", "standard_time"]
+
     def create(self, validated_data):
         # Check if Process First Wash is done or not
         try:
             ProcessFirstWash.objects.get(batch=validated_data["batch"])
         except ProcessFirstWash.DoesNotExist:
-            raise serializers.ValidationError("You've to complete first wash cycle first")
-            
-        first_wash_hydro = ProcessFirstWashHydro.objects.create(**validated_data,hydro_in_by=get_user_name(self.context["request"]))            
-        return first_wash_hydro                               
+            raise serializers.ValidationError(
+                "You've to complete first wash cycle first"
+            )
+
+        first_wash_hydro = ProcessFirstWashHydro.objects.create(
+            **validated_data, hydro_in_by=get_user_name(self.context["request"])
+        )
+        return first_wash_hydro
+
 
 class UpdateProcessFirstWashHydroSerializer(serializers.ModelSerializer):
     state = serializers.CharField(max_length=100, write_only=True)
+
     class Meta:
         model = ProcessFirstWashHydro
-        fields = ["state"]    
-    
-    def update(self, instance:ProcessFirstWashHydro, validated_data):
+        fields = ["state"]
+
+    def update(self, instance: ProcessFirstWashHydro, validated_data):
         state = validated_data["state"]
-        
+
         if state != "hydro_out":
             raise serializers.ValidationError("You have to provide validated state")
-        
-        if getattr(instance,state) is not None:
+
+        if getattr(instance, state) is not None:
             raise serializers.ValidationError("You've already completed this state")
-    
+
         instance.hydro_out = timezone.now()
         instance.hydro_out_by = get_user_name(self.context["request"])
-        instance.save(update_fields=["hydro_out","hydro_out_by"])
-        
+        instance.save(update_fields=["hydro_out", "hydro_out_by"])
+
         return instance
-    
+
+
 class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
     # We will not take input for this field from the frontend.
     dryer_in_by = serializers.CharField(max_length=100, read_only=True)
-    
+
     class Meta:
         model = ProcessFirstWashDryer
-        fields = ["id","batch","machine","standard_time","type","dryer_in","dryer_in_by","dryer_out","dryer_out_by"]
-        
+        fields = [
+            "id",
+            "batch",
+            "machine",
+            "standard_time",
+            "type",
+            "dryer_in",
+            "dryer_in_by",
+            "dryer_out",
+            "dryer_out_by",
+        ]
+
     # Replace the batch ID with its nested serialized data in responses,
     # while still allowing it to be written as a primary key during create.
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation["batch"] = SimpleBatchSerializer(
-            instance.batch
-        ).data
+        representation["batch"] = SimpleBatchSerializer(instance.batch).data
         return representation
-    
+
     def create(self, validated_data):
         # Check if Hydro is done or not
         try:
             ProcessFirstWashHydro.objects.get(batch=validated_data["batch"])
         except ProcessFirstWashHydro.DoesNotExist:
             raise serializers.ValidationError("You've to complete Hydro first")
-        
+
         # Without completing tumble, you can't do oven or conve
         # if validated_data["type"] == "oven" or "tumble":
         #     try:
         #         ProcessFirstWashDryer.objects.get(batch=validated_data["batch"])
         #     except ProcessFirstWashDryer.DoesNotExist:
-        #         raise serializers.ValidationError("You've to complete Conveyor first")    
-        
-        first_wash_dryer = ProcessFirstWashDryer.objects.create(**validated_data, dryer_in_by = get_user_name(self.context["request"]))
-        return first_wash_dryer        
-   
+        #         raise serializers.ValidationError("You've to complete Conveyor first")
+
+        first_wash_dryer = ProcessFirstWashDryer.objects.create(
+            **validated_data, dryer_in_by=get_user_name(self.context["request"])
+        )
+        return first_wash_dryer
+
+
 class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
     state = serializers.CharField(max_length=100, write_only=True)
-    
+
     class Meta:
-        model= ProcessFirstWashDryer
+        model = ProcessFirstWashDryer
         fields = ["state"]
-        
-    def update(self, instance:ProcessFirstWashDryer, validated_data):
+
+    def update(self, instance: ProcessFirstWashDryer, validated_data):
         state = validated_data["state"]
-        
+
         if state != "dryer_out":
             raise serializers.ValidationError("You have to provide validated state")
-        
-        if getattr(instance,state) is not None:
+
+        if getattr(instance, state) is not None:
             raise serializers.ValidationError("You've already completed this state")
-    
+
         instance.dryer_out = timezone.now()
         instance.dryer_out_by = get_user_name(self.context["request"])
-        instance.save(update_fields=["dryer_out","dryer_out_by"])
-        
+        instance.save(update_fields=["dryer_out", "dryer_out_by"])
+
         return instance
-                        
-    
+
+
 # class WashLogSerializer(serializers.ModelSerializer):
 #     batch_details = serializers.SerializerMethodField(method_name="get_batch_details", read_only=True)
 #     class Meta:
 #         model = WashLog
-#         fields = ["id", "content_type", "object_id", "batch_details", "total_quantity", "rejections", "rewash_quantity", "remaining_rewash_quantity", "status"]  
-    
+#         fields = ["id", "content_type", "object_id", "batch_details", "total_quantity", "rejections", "rewash_quantity", "remaining_rewash_quantity", "status"]
+
 #     def get_batch_details(self,instance:WashLog):
 #         batch = instance.source_batch
 #         return {
@@ -341,18 +463,18 @@ class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
 #             "color": batch.color,
 #             "shade": batch.shade
 #         }
-    
+
 #     def to_representation(self, instance:WashLog):
 #         representation = super().to_representation(instance)
 #         representation["content_type"] = instance.content_type.model
-#         return representation  
-    
+#         return representation
+
 # class UpdateWashLogSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = WashLog
 #         fields = ["rewash_quantity"]
 #         read_only_fields = ["content_type","object_id","total_quantity"]
-        
+
 #     def update(self, instance:WashLog, validated_data):
 #         new_rewash_quantity = validated_data["rewash_quantity"]
 #         increased_amount = new_rewash_quantity - instance.rewash_quantity
@@ -364,6 +486,3 @@ class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
 
 #         instance.refresh_from_db()
 #         return instance
-        
-            
-                                                            
