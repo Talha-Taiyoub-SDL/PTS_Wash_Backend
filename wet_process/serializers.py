@@ -97,21 +97,12 @@ class SimpleBatchSerializer(serializers.ModelSerializer):
 
 
 class BatchQcSerializer(serializers.ModelSerializer):
-    source = serializers.SerializerMethodField(method_name="get_source", read_only=True)
     batch = SimpleBatchSerializer(read_only=True)
 
     class Meta:
         model = BatchSource
         fields = ["source", "batch", "quantity", "rewash_quantity"]
         read_only_fields = ["source", "quantity"]
-
-    def get_source(self, instance: BatchSource):
-        return {
-            "id": instance.id,
-            "mpo": instance.source_object.mpo,
-            "style": instance.source_object.style,
-            "so": instance.source_object.so,
-        }
 
     def update(self, instance: BatchSource, validated_data):
         instance.rewash_quantity = validated_data["rewash_quantity"]
@@ -486,3 +477,86 @@ class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
 
 #         instance.refresh_from_db()
 #         return instance
+
+
+# serializers.py
+
+
+class RewashSourceSerializer(serializers.Serializer):
+    batch_source = serializers.PrimaryKeyRelatedField(
+        queryset=BatchSource.objects.all()
+    )
+    rewash_quantity = serializers.IntegerField(min_value=1)
+
+
+class BatchRewashSerializer(serializers.Serializer):
+    sources = RewashSourceSerializer(many=True)
+
+    # def validate(self, data):
+    #     batch = self.context["batch"]
+
+    #     source_ids = [
+    #         source["batch_source_id"]
+    #         for source in data["sources"]
+    #     ]
+
+    #     batch_sources = BatchSource.objects.filter(
+    #         id__in=source_ids,
+    #         batch=batch
+    #     )
+
+    #     batch_source_map = {
+    #         source.id: source
+    #         for source in batch_sources
+    #     }
+
+    #     for source_data in data["sources"]:
+    #         batch_source = batch_source_map.get(
+    #             source_data["batch_source_id"]
+    #         )
+
+    #         if not batch_source:
+    #             raise serializers.ValidationError({
+    #                 "sources": "Invalid batch source."
+    #             })
+
+    #         if source_data["rewash_quantity"] > batch_source.quantity:
+    #             raise serializers.ValidationError({
+    #                 "rewash_quantity":
+    #                 f"Rewash quantity cannot exceed quantity for source {batch_source.id}"
+    #             })
+
+    #     data["batch_source_map"] = batch_source_map
+
+    #     return data
+
+    def save(self):
+        batch = self.context["batch"]
+
+        sources = self.validated_data["sources"]
+        # batch_source_map = self.validated_data["batch_source_map"]
+
+        # for source_data in sources:
+        #     batch_source = batch_source_map[
+        #         source_data["batch_source_id"]
+        #     ]
+
+        #     batch_source.rewash_quantity = source_data["rewash_quantity"]
+
+        # BatchSource.objects.bulk_update(
+        #     batch_source_map.values(),
+        #     ["rewash_quantity"]
+        # )
+
+        for source in sources:
+            batch_source = source["batch_source"]
+            batch_source.rewash_quantity = source["rewash_quantity"]
+            batch_source.save(update_fields=["rewash_quantity"])
+
+        batch.total_rewash_quantity = sum(
+            batch.sources.values_list("rewash_quantity", flat=True)
+        )
+
+        batch.save(update_fields=["total_rewash_quantity"])
+
+        return batch
