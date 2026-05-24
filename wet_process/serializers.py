@@ -513,7 +513,9 @@ class RejectionSerializer(serializers.Serializer):
 
                 except IntegrityError:
                     raise serializers.ValidationError(
-                        {"sources": ["One or more garments are already rejected"]}
+                        {
+                            "garment_unit": f"Garment{garment_unit.individual_barcode} is already rejected"
+                        }
                     )
 
                 garment_unit.status = GarmentUnitStatus.REJECTED
