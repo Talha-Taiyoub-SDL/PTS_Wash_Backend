@@ -5,7 +5,6 @@ from . import views
 router = DefaultRouter()
 router.register("machines", views.MachineViewSet, basename="machine")
 router.register("batches", views.BatchViewSet, basename="batch")
-router.register("batch-sources", views.BatchQcViewSet, basename="batch-source")
 router.register(
     "first-wash-processes", views.ProcessFirstWashViewSet, basename="first-wash-process"
 )

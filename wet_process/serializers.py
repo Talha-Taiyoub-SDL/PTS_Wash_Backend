@@ -35,20 +35,6 @@ class SimpleBatchSerializer(serializers.ModelSerializer):
         ]
 
 
-class BatchQcSerializer(serializers.ModelSerializer):
-    batch = SimpleBatchSerializer(read_only=True)
-
-    class Meta:
-        model = BatchSource
-        fields = ["source", "batch", "quantity", "rewash_quantity"]
-        read_only_fields = ["source", "quantity"]
-
-    def update(self, instance: BatchSource, validated_data):
-        instance.rewash_quantity = validated_data["rewash_quantity"]
-        instance.save(update_fields=["rewash_quantity"])
-        return instance
-
-
 class BatchSourceInputSerializer(serializers.Serializer):
     # When the input type is aggregate, then mpo, style, so, and quantity is needed.
     mpo = serializers.CharField(required=False)
@@ -177,7 +163,6 @@ class BatchSerializer(serializers.ModelSerializer):
             return batch
 
 
-# Below is the line
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine

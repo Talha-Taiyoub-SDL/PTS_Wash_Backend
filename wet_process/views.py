@@ -2,7 +2,6 @@ from django.shortcuts import get_object_or_404
 from .models import (
     Machine,
     Batch,
-    BatchSource,
     ProcessFirstWashDryer,
     ProcessFirstWash,
     ProcessFirstWashHydro,
@@ -11,7 +10,6 @@ from .serializers import (
     CreateProcessFirstWashSerializer,
     MachineSerializer,
     BatchSerializer,
-    BatchQcSerializer,
     ProcessFirstWashDryerSerializer,
     ProcessFirstWashSerializer,
     RejectionSerializer,
@@ -133,26 +131,6 @@ class BatchViewSet(ModelViewSet):
     http_method_names = ["get", "post"]
     queryset = Batch.objects.all()
     serializer_class = BatchSerializer
-
-
-class BatchQcViewSet(ModelViewSet):
-    http_method_names = ["get", "patch"]
-
-    def get_queryset(self):
-        queryset = BatchSource.objects.all().select_related("batch")
-        batch = self.request.query_params.get("batch", None)
-        stage = self.request.query_params.get("stage", None)
-        type = self.request.query_params.get("type", None)
-
-        if batch:
-            queryset = queryset.filter(batch=batch)
-        if stage:
-            queryset = queryset.filter(batch__stage=stage)
-        if type:
-            queryset = queryset.filter(batch__type=type)
-        return queryset
-
-    serializer_class = BatchQcSerializer
 
 
 # Write documentation about the logic of showing remaining rewash quantity per mpo, style, and so.
