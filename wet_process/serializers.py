@@ -19,13 +19,6 @@ from rest_framework import serializers
 
 
 class SimpleBatchSerializer(serializers.ModelSerializer):
-    rejection_count = serializers.SerializerMethodField(
-        method_name="get_rejection_count", read_only=True
-    )
-    total_quantity = serializers.SerializerMethodField(
-        method_name="get_total_quantity", read_only=True
-    )
-
     class Meta:
         model = Batch
         fields = [
@@ -35,15 +28,11 @@ class SimpleBatchSerializer(serializers.ModelSerializer):
             "shade",
             "stage",
             "type",
-            "rejection_count",
+            "status",
             "total_quantity",
+            "total_rewash_quantity",
+            "total_rejection_quantity",
         ]
-
-    def get_rejection_count(self, instance: Batch):
-        return instance.rejections.count()
-
-    def get_total_quantity(self, instance: Batch):
-        return instance.sources.aggregate(total=Sum("quantity"))["total"] or 0
 
 
 class BatchQcSerializer(serializers.ModelSerializer):
