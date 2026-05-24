@@ -99,7 +99,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         except Planning.DoesNotExist:
             raise serializers.ValidationError(
                 {
-                    "garment_unit": "Planning does not exist for the MPO this garment belongs to"
+                    "garment_unit": f"Planning does not exist for the MPO {garment_unit.mpo} and Style {garment_unit.style} this garment belongs to"
                 }
             )
 
