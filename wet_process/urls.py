@@ -19,10 +19,9 @@ router.register(
     views.ProcessFirstWashDryerViewSet,
     basename="first-wash-dryer-process",
 )
-router.register("rejections", views.RejectionViewSet, basename="rejection")
-# router.register("wash-logs", views.WashLogViewSet, basename="wash-log")
 
 urlpatterns = [
     path("", include(router.urls)),
     path("batches/<str:pk>/rewash/", views.BatchRewashView.as_view()),
+    path("batches/<str:pk>/rejections/", views.RejectionView.as_view()),
 ]

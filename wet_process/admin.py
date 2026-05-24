@@ -23,7 +23,12 @@ class BatchAdmin(admin.ModelAdmin):
         "total_rejection_quantity",
     ]
 
-    list_editable = ["status"]
+    list_editable = [
+        "status",
+        "total_quantity",
+        "total_rewash_quantity",
+        "total_rejection_quantity",
+    ]
 
 
 @admin.register(models.BatchSource)
@@ -39,15 +44,12 @@ class BatchSourceAdmin(admin.ModelAdmin):
         "rejection_quantity",
     ]
 
+    list_editable = ["rewash_quantity", "rejection_quantity"]
+
 
 @admin.register(models.BatchSourcePiece)
 class BatchSourcePieceAdmin(admin.ModelAdmin):
     list_display = ["id", "batch_source", "garment_unit"]
-
-
-# @admin.register(models.WashLog)
-# class WashLogAdmin(admin.ModelAdmin):
-#     list_display = ["id","content_type","object_id","total_quantity","rejections","rewash_quantity","remaining_rewash_quantity","status"]
 
 
 @admin.register(models.ProcessFirstWash)
@@ -95,9 +97,9 @@ class ProcessFirstWashDryerAdmin(admin.ModelAdmin):
 class RejectionAdmin(admin.ModelAdmin):
     list_display = [
         "id",
-        "individual_barcode",
-        "batch",
-        "reason",
+        "garment_unit",
+        "batch_source",
+        "rejection_reason",
         "rejected_at",
-        "rejected_by",
+        "operator",
     ]

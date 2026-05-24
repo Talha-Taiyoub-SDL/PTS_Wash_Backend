@@ -2,7 +2,8 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 from common.models import GarmentUnit
-from .choices import BatchInputType
+from .choices import BatchInputType, RejectionReason
+from common.choices import GarmentUnitStatus
 from common.utils import get_user_name
 from .models import (
     Machine,
@@ -15,57 +16,6 @@ from .models import (
     ProcessFirstWashDryer,
 )
 from rest_framework import serializers
-
-
-class RejectionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Rejection
-        fields = [
-            "id",
-            "individual_barcode",
-            "batch",
-            "reason",
-            "rejected_at",
-            "rejected_by",
-        ]
-
-
-class CreateRejectionSerializer(serializers.Serializer):
-    batch = serializers.PrimaryKeyRelatedField(queryset=Batch.objects.all())
-    rejections = serializers.ListField(child=serializers.DictField())
-
-    def create(self, validated_data):
-        batch = validated_data["batch"]
-        rejections = validated_data["rejections"]
-        user = get_user_name(self.context["request"])
-
-        barcodes = [r["individual_barcode"] for r in rejections]
-
-        # check duplicates in payload
-        if len(barcodes) != len(set(barcodes)):
-            raise serializers.ValidationError(
-                {"rejections": "Duplicate individual_barcode found in request."}
-            )
-
-        # check duplicates in DB
-        existing = set(
-            Rejection.objects.filter(individual_barcode__in=barcodes).values_list(
-                "individual_barcode", flat=True
-            )
-        )
-
-        if existing:
-            raise serializers.ValidationError(
-                {"rejections": f"These barcodes already exist: {list(existing)}"}
-            )
-
-        objects = [
-            Rejection(batch=batch, rejected_by=user, **rejection)
-            for rejection in rejections
-        ]
-
-        created = Rejection.objects.bulk_create(objects)
-        return created
 
 
 class SimpleBatchSerializer(serializers.ModelSerializer):
@@ -441,47 +391,6 @@ class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
         return instance
 
 
-# class WashLogSerializer(serializers.ModelSerializer):
-#     batch_details = serializers.SerializerMethodField(method_name="get_batch_details", read_only=True)
-#     class Meta:
-#         model = WashLog
-#         fields = ["id", "content_type", "object_id", "batch_details", "total_quantity", "rejections", "rewash_quantity", "remaining_rewash_quantity", "status"]
-
-#     def get_batch_details(self,instance:WashLog):
-#         batch = instance.source_batch
-#         return {
-#             "buyer": batch.buyer,
-#             "color": batch.color,
-#             "shade": batch.shade
-#         }
-
-#     def to_representation(self, instance:WashLog):
-#         representation = super().to_representation(instance)
-#         representation["content_type"] = instance.content_type.model
-#         return representation
-
-# class UpdateWashLogSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = WashLog
-#         fields = ["rewash_quantity"]
-#         read_only_fields = ["content_type","object_id","total_quantity"]
-
-#     def update(self, instance:WashLog, validated_data):
-#         new_rewash_quantity = validated_data["rewash_quantity"]
-#         increased_amount = new_rewash_quantity - instance.rewash_quantity
-
-#         WashLog.objects.filter(id=instance.id).update(
-#             remaining_rewash_quantity=F("remaining_rewash_quantity") + increased_amount,
-#             rewash_quantity=new_rewash_quantity
-#         )
-
-#         instance.refresh_from_db()
-#         return instance
-
-
-# serializers.py
-
-
 class RewashSourceSerializer(serializers.Serializer):
     batch_source = serializers.PrimaryKeyRelatedField(
         queryset=BatchSource.objects.all()
@@ -558,5 +467,59 @@ class BatchRewashSerializer(serializers.Serializer):
         )
 
         batch.save(update_fields=["total_rewash_quantity"])
+
+        return batch
+
+
+class RejectionSourceSerializer(serializers.Serializer):
+    garment_unit = serializers.PrimaryKeyRelatedField(
+        queryset=GarmentUnit.objects.all()
+    )
+    rejection_reason = serializers.ChoiceField(choices=RejectionReason.choices)
+
+
+class RejectionSerializer(serializers.Serializer):
+    sources = RejectionSourceSerializer(many=True)
+
+    def save(self, **kwargs):
+        batch = self.context["batch"]
+        sources = self.validated_data["sources"]
+
+        with transaction.atomic():
+            for source in sources:
+                garment_unit = source["garment_unit"]
+                rejection_reason = source["rejection_reason"]
+
+                try:
+                    batch_source = batch.sources.get(
+                        mpo=garment_unit.mpo,
+                        style=garment_unit.style,
+                        so=garment_unit.so,
+                    )
+                except BatchSource.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {
+                            "garment_unit": f"Garment {garment_unit.individual_barcode} is not part of this batch"
+                        }
+                    )
+
+                Rejection.objects.create(
+                    batch_source=batch_source,
+                    garment_unit=garment_unit,
+                    rejection_reason=rejection_reason,
+                    operator=get_user_name(self.context["request"]),
+                )
+
+                garment_unit.status = GarmentUnitStatus.REJECTED
+                garment_unit.save(update_fields=["status"])
+
+                batch_source.rejection_quantity += 1
+                batch_source.save(update_fields=["rejection_quantity"])
+
+            batch.total_rejection_quantity = sum(
+                batch.sources.values_list("rejection_quantity", flat=True)
+            )
+
+            batch.save(update_fields=["total_rejection_quantity"])
 
         return batch

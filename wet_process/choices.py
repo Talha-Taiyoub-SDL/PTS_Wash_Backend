@@ -39,3 +39,17 @@ class BatchStatus(models.TextChoices):
 class BatchInputType(models.TextChoices):
     AGGREGATE = "aggregate", "Aggregate"
     PIECES = "pieces", "Pieces"
+
+
+class RejectionReason(models.TextChoices):
+    STAIN = "stain", "Stain"
+    COLOR_BLEED = "color_bleed", "Color Bleed"
+    FABRIC_DAMAGE = "fabric_damage", "Fabric Damage"
+    SHRINKAGE = "shrinkage", "Shrinkage"
+    STITCH_DAMAGE = "stitch_damage", "Stitch Damage"
+    BUTTON_MISSING = "button_missing", "Button Missing"
+    ZIPPER_DAMAGE = "zipper_damage", "Zipper Damage"
+    WRINKLE = "wrinkle", "Wrinkle"
+    ODOR = "odor", "Odor"
+    IMPROPER_WASH = "improper_wash", "Improper Wash"
+    OTHER = "other", "Other"

@@ -1,7 +1,7 @@
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.validators import MinValueValidator
-from .choices import BatchStage, BatchType, BatchStatus
+from .choices import BatchStage, BatchType, BatchStatus, RejectionReason
 from common.models import GarmentUnit
 
 
@@ -85,6 +85,9 @@ class BatchSource(models.Model):
             models.UniqueConstraint(fields=["batch", "mpo"], name="unique_batch_mpo")
         ]
 
+    def __str__(self):
+        return f"{self.batch}-{self.mpo}"
+
 
 class BatchSourcePiece(models.Model):
     batch_source = models.ForeignKey(
@@ -114,36 +117,13 @@ class Machine(models.Model):
 
 
 class Rejection(models.Model):
-    # Copy the barcode of the individual garment
-    individual_barcode = models.CharField(max_length=100, unique=True)
-    batch = models.ForeignKey(
-        Batch, on_delete=models.CASCADE, related_name="rejections"
+    garment_unit = models.OneToOneField(GarmentUnit, on_delete=models.CASCADE)
+    batch_source = models.ForeignKey(
+        BatchSource, on_delete=models.CASCADE, related_name="rejections"
     )
-    reason = models.CharField(max_length=100)
+    rejection_reason = models.CharField(max_length=100, choices=RejectionReason.choices)
     rejected_at = models.DateTimeField(auto_now=True)
-    rejected_by = models.CharField(max_length=100)
-
-
-# class WashLog(models.Model):
-#     content_type = models.ForeignKey(
-#         ContentType,
-#         on_delete=models.PROTECT
-#     )
-#     object_id = models.PositiveIntegerField()
-
-#     # As source batch, either batch_for_first_wash or batch_for_rewash will be placed (up to this point)
-#     source_batch = GenericForeignKey(
-#         "content_type",
-#         "object_id"
-#     )
-#     total_quantity = models.PositiveIntegerField()
-#     rejections = models.PositiveIntegerField(default=0)
-#     rewash_quantity = models.PositiveIntegerField(default=0)
-#     remaining_rewash_quantity = models.PositiveIntegerField(default=0)
-#     status = models.CharField(max_length=100, null=True, blank=True)
-
-#     class Meta:
-#         unique_together = [("content_type","object_id")]
+    operator = models.CharField(max_length=100)
 
 
 class ProcessFirstWash(models.Model):

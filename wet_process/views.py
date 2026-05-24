@@ -1,11 +1,9 @@
-from django.shortcuts import get_object_or_404, render
-from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import get_object_or_404
 from .models import (
     Machine,
     Batch,
     BatchSource,
     ProcessFirstWashDryer,
-    Rejection,
     ProcessFirstWash,
     ProcessFirstWashHydro,
 )
@@ -14,7 +12,6 @@ from .serializers import (
     MachineSerializer,
     BatchSerializer,
     BatchQcSerializer,
-    CreateRejectionSerializer,
     ProcessFirstWashDryerSerializer,
     ProcessFirstWashSerializer,
     RejectionSerializer,
@@ -24,12 +21,11 @@ from .serializers import (
     CreateProcessFirstWashHydroSerializer,
     UpdateProcessFirstWashHydroSerializer,
     BatchRewashSerializer,
-    BatchSourceSerializer,
 )
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
-from rest_framework.decorators import APIView, action
+from rest_framework.decorators import APIView
 # Create your views here.
 
 
@@ -133,65 +129,6 @@ class ProcessFirstWashDryerViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class RejectionViewSet(ModelViewSet):
-    def get_queryset(self):
-        queryset = Rejection.objects.all()
-        batch = self.request.query_params.get("batch", None)
-        queryset = queryset.filter(batch=batch)
-
-    def get_serializer_class(self):
-        if self.request.method == "POST":
-            return CreateRejectionSerializer
-        else:
-            return RejectionSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        rejections = serializer.save()
-        serializer = RejectionSerializer(rejections, many=True)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    serializer_class = RejectionSerializer
-
-
-# class WashLogViewSet(ModelViewSet):
-#     def get_queryset(self):
-#         queryset = WashLog.objects.all()
-#         content_type = self.request.query_params.get("content_type")
-#         object_id = self.request.query_params.get("object_id")
-
-#         if content_type:
-#             content_type = ContentType.objects.get(model=content_type)
-#             queryset = queryset.filter(content_type=content_type.id)
-
-#         if object_id:
-#             queryset = queryset.filter(object_id=object_id)
-
-#         return queryset
-
-#     def get_serializer_class(self):
-#         if self.request.method == "PATCH":
-#             return UpdateWashLogSerializer
-#         else:
-#             return WashLogSerializer
-
-#     # To provide the list of batches, consisting those new rewash batches can be created
-#     @action(detail=False, methods=["get"], url_path="rewashing")
-#     def rewashing(self, request):
-#         queryset = self.get_queryset().filter(remaining_rewash_quantity__gt=0)
-#         serializer = WashLogSerializer(queryset, many=True)
-#         return Response(serializer.data)
-
-#     def update(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         serializer = self.get_serializer(instance, data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         wash_log = serializer.save()
-#         serializer = WashLogSerializer(wash_log)
-#         return Response(serializer.data)
-
-
 class BatchViewSet(ModelViewSet):
     http_method_names = ["get", "post"]
     queryset = Batch.objects.all()
@@ -234,3 +171,16 @@ class BatchRewashView(APIView):
         serializer = BatchSerializer(batch)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RejectionView(APIView):
+    def post(self, request, pk):
+        batch = get_object_or_404(Batch, pk=pk)
+
+        serializer = RejectionSerializer(
+            data=request.data, context={"batch": batch, "request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        batch = serializer.save()
+        serializer = BatchSerializer(batch)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
