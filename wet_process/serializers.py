@@ -465,6 +465,15 @@ class RejectionSerializer(serializers.Serializer):
                 rejection_reason = source["rejection_reason"]
 
                 try:
+                    BatchSourcePiece.objects.get(garment_unit=garment_unit)
+                except BatchSourcePiece.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {
+                            "garment_unit": f"Garment {garment_unit.individual_barcode} is not assigned to any wash batch"
+                        }
+                    )
+
+                try:
                     batch_source = batch.sources.get(
                         mpo=garment_unit.mpo,
                         style=garment_unit.style,
