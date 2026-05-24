@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Sum
 from django.utils import timezone
 from common.models import GarmentUnit
@@ -503,12 +503,18 @@ class RejectionSerializer(serializers.Serializer):
                         }
                     )
 
-                Rejection.objects.create(
-                    batch_source=batch_source,
-                    garment_unit=garment_unit,
-                    rejection_reason=rejection_reason,
-                    operator=get_user_name(self.context["request"]),
-                )
+                try:
+                    Rejection.objects.create(
+                        batch_source=batch_source,
+                        garment_unit=garment_unit,
+                        rejection_reason=rejection_reason,
+                        operator=get_user_name(self.context["request"]),
+                    )
+
+                except IntegrityError:
+                    raise serializers.ValidationError(
+                        {"sources": ["One or more garments are already rejected"]}
+                    )
 
                 garment_unit.status = GarmentUnitStatus.REJECTED
                 garment_unit.save(update_fields=["status"])
