@@ -5,13 +5,21 @@ from .models import (
     ProcessFirstWashDryer,
     ProcessFirstWash,
     ProcessFirstWashHydro,
+    ProcessSecondWash,
+    ProcessSecondWashDryer,
+    ProcessSecondWashHydro,
 )
 from .serializers import (
     CreateProcessFirstWashSerializer,
+    CreateProcessSecondWashHydroSerializer,
+    CreateProcessSecondWashSerializer,
     MachineSerializer,
     BatchSerializer,
     ProcessFirstWashDryerSerializer,
     ProcessFirstWashSerializer,
+    ProcessSecondWashDryerSerializer,
+    ProcessSecondWashHydroSerializer,
+    ProcessSecondWashSerializer,
     RejectionSerializer,
     UpdateProcessFirstWashDryerSerializer,
     UpdateProcessFirstWashSerializer,
@@ -20,6 +28,9 @@ from .serializers import (
     UpdateProcessFirstWashHydroSerializer,
     BatchRewashSerializer,
     UpdateBatchSerializer,
+    UpdateProcessSecondWashDryerSerializer,
+    UpdateProcessSecondWashHydroSerializer,
+    UpdateProcessSecondWashSerializer,
 )
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
@@ -66,6 +77,39 @@ class ProcessFirstWashViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class ProcessSecondWashViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = ProcessSecondWash.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateProcessSecondWashSerializer
+        elif self.request.method == "PATCH":
+            return UpdateProcessSecondWashSerializer
+        else:
+            return ProcessSecondWashSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        first_wash = serializer.save()
+        serializer = ProcessSecondWashSerializer(first_wash)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessSecondWashSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class ProcessFirstWashHydroViewSet(ModelViewSet):
     def get_queryset(self):
         queryset = ProcessFirstWashHydro.objects.all()
@@ -99,6 +143,39 @@ class ProcessFirstWashHydroViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class ProcessSecondWashHydroViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = ProcessSecondWashHydro.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateProcessSecondWashHydroSerializer
+        elif self.request.method == "PATCH":
+            return UpdateProcessSecondWashHydroSerializer
+        else:
+            return ProcessSecondWashHydroSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        first_wash_hydro = serializer.save()
+        serializer = ProcessSecondWashHydroSerializer(first_wash_hydro)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessSecondWashHydroSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class ProcessFirstWashDryerViewSet(ModelViewSet):
     def get_queryset(self):
         queryset = ProcessFirstWashDryer.objects.all()
@@ -125,6 +202,35 @@ class ProcessFirstWashDryerViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         serializer = ProcessFirstWashDryerSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProcessSecondWashDryerViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = ProcessSecondWashDryer.objects.all()
+        batch = self.request.query_params.get("batch")
+        type = self.request.query_params.get("type")
+
+        if batch:
+            queryset = queryset.filter(batch=batch)
+
+        if type:
+            queryset = queryset.filter(type=type)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UpdateProcessSecondWashDryerSerializer
+        else:
+            return ProcessSecondWashDryerSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = ProcessSecondWashDryerSerializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

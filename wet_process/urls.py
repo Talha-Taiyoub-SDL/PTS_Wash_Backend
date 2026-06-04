@@ -9,14 +9,29 @@ router.register(
     "first-wash-processes", views.ProcessFirstWashViewSet, basename="first-wash-process"
 )
 router.register(
+    "second-wash-processes",
+    views.ProcessSecondWashViewSet,
+    basename="second-wash-process",
+)
+router.register(
     "first-wash-hydro-processes",
     views.ProcessFirstWashHydroViewSet,
     basename="first-wash-hydro-process",
 )
 router.register(
+    "second-wash-hydro-processes",
+    views.ProcessSecondWashHydroViewSet,
+    basename="second-wash-hydro-process",
+)
+router.register(
     "first-wash-dryer-processes",
     views.ProcessFirstWashDryerViewSet,
     basename="first-wash-dryer-process",
+)
+router.register(
+    "second-wash-dryer-processes",
+    views.ProcessSecondWashDryerViewSet,
+    basename="second-wash-dryer-process",
 )
 
 urlpatterns = [
