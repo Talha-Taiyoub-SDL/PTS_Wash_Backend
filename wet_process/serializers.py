@@ -163,6 +163,18 @@ class BatchSerializer(serializers.ModelSerializer):
             return batch
 
 
+class UpdateBatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Batch
+        fields = ["status"]
+
+    def update(self, instance: Batch, validated_data):
+        instance.status = validated_data["status"]
+        instance.save(update_fields=["status"])
+
+        return instance
+
+
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine

@@ -19,6 +19,7 @@ from .serializers import (
     CreateProcessFirstWashHydroSerializer,
     UpdateProcessFirstWashHydroSerializer,
     BatchRewashSerializer,
+    UpdateBatchSerializer,
 )
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
@@ -128,9 +129,14 @@ class ProcessFirstWashDryerViewSet(ModelViewSet):
 
 
 class BatchViewSet(ModelViewSet):
-    http_method_names = ["get", "post"]
+    http_method_names = ["get", "post", "patch"]
     queryset = Batch.objects.all()
-    serializer_class = BatchSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return UpdateBatchSerializer
+
+        return BatchSerializer
 
 
 # Write documentation about the logic of showing remaining rewash quantity per mpo, style, and so.
