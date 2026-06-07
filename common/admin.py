@@ -35,3 +35,4 @@ class GarmentUnitAdmin(admin.ModelAdmin):
         "received_by",
     ]
     list_editable = ["status"]
+    search_fields = ["individual_barcode", "mpo", "status"]
