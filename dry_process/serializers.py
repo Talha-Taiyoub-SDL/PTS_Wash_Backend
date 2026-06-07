@@ -1,10 +1,12 @@
 from django.db import transaction, IntegrityError
+from django.db.models import Max
 from .models import TrackingHistory
 from .choices import Action, RejectionReason
 from rest_framework import serializers
 from common.utils import get_user_name
 from production.models import Planning, PlanningRouteStep
 from common.models import GarmentUnit
+from common.choices import GarmentUnitStatus
 
 
 class TrackingHistorySerializer(serializers.ModelSerializer):
@@ -84,6 +86,9 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         # Check if planning exist for the MPO the garment belongs to
         try:
             planning = Planning.objects.get(mpo=garment_unit.mpo)
+            max_sequence = planning.route_steps.aggregate(max_sequence=Max("sequence"))[
+                "max_sequence"
+            ]
 
             # Check if this is a valid stage.
             try:
@@ -103,7 +108,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
                 }
             )
 
-        # Create History for the specified action
+        # Create history for the specified action
         if action == Action.IN:
             # Whent it's the first stage, the garment unit's status must have to be "received"
             if route_step.sequence == 1:
@@ -135,9 +140,15 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         elif action == Action.OUT:
             # For out action, the garment unit's status must have to be the same stage with IN action
             if garment_unit.status == route_step.stage + "_" + Action.IN:
-                return self.create_history(
+                history = self.create_history(
                     stage=stage, action=action, garment_unit=garment_unit
                 )
+
+                if route_step.sequence == max_sequence:
+                    garment_unit.status = GarmentUnitStatus.DRY_COMPLETE
+                    garment_unit.save(update_fields=["status"])
+
+                return history
             else:
                 raise serializers.ValidationError(
                     {"stage": "Please complete the stages accordingly"}
