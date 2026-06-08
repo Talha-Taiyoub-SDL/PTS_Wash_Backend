@@ -53,3 +53,9 @@ class RejectionReason(models.TextChoices):
     ODOR = "odor", "Odor"
     IMPROPER_WASH = "improper_wash", "Improper Wash"
     OTHER = "other", "Other"
+
+
+class DryerType(models.TextChoices):
+    CONVEYOR = "conveyor", "Conveyor"
+    OVEN = "oven", "Oven"
+    TUMBLE = "tumble", "Tumble"
