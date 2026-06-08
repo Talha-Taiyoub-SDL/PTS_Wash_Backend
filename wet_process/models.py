@@ -1,7 +1,13 @@
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.validators import MinValueValidator
-from .choices import BatchStage, BatchType, BatchStatus, RejectionReason
+from .choices import (
+    BatchStage,
+    BatchType,
+    BatchStatus,
+    RejectionReason,
+    DryerType,
+)
 from common.models import GarmentUnit
 
 
@@ -263,3 +269,50 @@ class MachineProcessBase(models.Model):
 
     class Meta:
         abstract = True
+
+
+class ExecutionBase(MachineProcessBase):
+    start_time = models.DateTimeField(auto_now_add=True)
+    started_by = models.CharField(max_length=100)
+    finish_time = models.DateTimeField(null=True, blank=True)
+    finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
+class WashProcess(MachineProcessBase):
+    batch = models.OneToOneField(
+        Batch, on_delete=models.CASCADE, related_name="wash_process"
+    )
+
+    # Loading
+    loading_start = models.DateTimeField(auto_now_add=True)
+    loading_started_by = models.CharField(max_length=100)
+
+    loading_finish = models.DateTimeField(null=True, blank=True)
+    loading_finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+    # Loading is finished means process is automatically started
+    process_finish = models.DateTimeField(null=True, blank=True)
+    process_finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+    # Process is finished means unloading is automatically started
+    unloading_finish = models.DateTimeField(null=True, blank=True)
+    unloading_finished_by = models.CharField(max_length=100, null=True, blank=True)
+
+
+class HydroProcess(ExecutionBase):
+    batch = models.OneToOneField(
+        Batch, on_delete=models.CASCADE, related_name="hydro_process"
+    )
+
+
+class DryerProcess(ExecutionBase):
+    batch = models.ForeignKey(
+        Batch, on_delete=models.CASCADE, related_name="dryer_processes"
+    )
+    type = models.CharField(max_length=10, choices=DryerType.choices)
+
+    class Meta:
+        unique_together = [("batch", "type")]
