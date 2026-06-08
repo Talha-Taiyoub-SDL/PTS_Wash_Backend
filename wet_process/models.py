@@ -110,6 +110,7 @@ class Machine(models.Model):
         primary_key=True, validators=[MinValueValidator(1)]
     )
     SAP = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
     added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -254,3 +255,11 @@ class ProcessSecondWashDryer(models.Model):
 
     class Meta:
         unique_together = [("batch", "type")]
+
+
+class MachineProcessBase(models.Model):
+    machine = models.ForeignKey(Machine, on_delete=models.PROTECT)
+    standard_time = models.DurationField()
+
+    class Meta:
+        abstract = True
