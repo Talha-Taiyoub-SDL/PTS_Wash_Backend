@@ -275,13 +275,21 @@ class CreateHydroProcessSerializer(serializers.ModelSerializer):
         model = HydroProcess
         fields = ["batch", "machine", "standard_time"]
 
-    def create(self, validated_data):
-        # Check if wash process is done or not
+    # Check if wash process is done or not
+    def validate(self, attrs):
         try:
-            WashProcess.objects.get(batch=validated_data["batch"])
+            wash_process = WashProcess.objects.get(batch=attrs["batch"])
         except WashProcess.DoesNotExist:
-            raise serializers.ValidationError("You've to complete wash process first")
+            raise serializers.ValidationError(
+                "You've to complete the wash process first"
+            )
 
+        if not wash_process.unloading_finish:
+            raise serializers.ValidationError("Wash process is not completed yet")
+
+        return attrs
+
+    def create(self, validated_data):
         hydro_process = HydroProcess.objects.create(
             **validated_data, started_by=get_user_name(self.context["request"])
         )
