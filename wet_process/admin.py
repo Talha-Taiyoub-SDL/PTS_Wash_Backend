@@ -69,6 +69,41 @@ class WashProcessAdmin(admin.ModelAdmin):
         "unloading_finished_by",
     ]
 
+    search_fields = ["batch"]
+
+
+@admin.register(models.HydroProcess)
+class HydroProcessAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "batch",
+        "machine",
+        "standard_time",
+        "start_time",
+        "started_by",
+        "finish_time",
+        "finished_by",
+    ]
+
+    search_fields = ["batch"]
+
+
+@admin.register(models.DryerProcess)
+class DryerProcessAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "batch",
+        "machine",
+        "standard_time",
+        "type",
+        "start_time",
+        "started_by",
+        "finish_time",
+        "finished_by",
+    ]
+
+    search_fields = ["batch", "type"]
+
 
 @admin.register(models.Rejection)
 class RejectionAdmin(admin.ModelAdmin):
