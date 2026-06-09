@@ -52,6 +52,24 @@ class BatchSourcePieceAdmin(admin.ModelAdmin):
     list_display = ["id", "batch_source", "garment_unit"]
 
 
+@admin.register(models.WashProcess)
+class WashProcessAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "batch",
+        "machine",
+        "standard_time",
+        "loading_start",
+        "loading_started_by",
+        "loading_finish",
+        "loading_finished_by",
+        "process_finish",
+        "process_finished_by",
+        "unloading_finish",
+        "unloading_finished_by",
+    ]
+
+
 @admin.register(models.ProcessFirstWash)
 class ProcessFirstWashAdmin(admin.ModelAdmin):
     list_display = [
