@@ -8,17 +8,6 @@ router.register("batches", views.BatchViewSet, basename="batch")
 router.register("wash-processes", views.WashProcessViewSet, basename="wash-process")
 router.register("hydro-processes", views.HydroProcessViewSet, basename="hydro-process")
 
-
-router.register(
-    "first-wash-hydro-processes",
-    views.ProcessFirstWashHydroViewSet,
-    basename="first-wash-hydro-process",
-)
-router.register(
-    "second-wash-hydro-processes",
-    views.ProcessSecondWashHydroViewSet,
-    basename="second-wash-hydro-process",
-)
 router.register(
     "first-wash-dryer-processes",
     views.ProcessFirstWashDryerViewSet,
