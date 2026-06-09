@@ -112,7 +112,7 @@ class DryerProcessViewSet(ModelViewSet):
         if self.request.method == "POST":
             return CreateDryerProcessSerializer
         elif self.request.method == "PATCH":
-            UpdateDryerProcessSerializer
+            return UpdateDryerProcessSerializer
         else:
             return DryerProcessSerializer
 
