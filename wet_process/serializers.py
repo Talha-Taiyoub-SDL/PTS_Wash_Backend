@@ -297,7 +297,7 @@ class CreateHydroProcessSerializer(serializers.ModelSerializer):
 
 
 class UpdateHydroProcessSerializer(serializers.ModelSerializer):
-    action = serializers.ChoiceField(choices=["finish"])
+    action = serializers.ChoiceField(choices=["finish"], write_only=True)
 
     class Meta:
         model = HydroProcess
@@ -361,7 +361,7 @@ class CreateDryerProcessSerializer(serializers.ModelSerializer):
 
 
 class UpdateDryerProcessSerializer(serializers.ModelSerializer):
-    action = serializers.ChoiceField(choices=["finish"])
+    action = serializers.ChoiceField(choices=["finish"], write_only=True)
 
     class Meta:
         model = DryerProcess
