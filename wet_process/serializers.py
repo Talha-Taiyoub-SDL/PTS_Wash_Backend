@@ -11,12 +11,6 @@ from .models import (
     BatchSource,
     BatchSourcePiece,
     Rejection,
-    ProcessFirstWash,
-    ProcessFirstWashHydro,
-    ProcessFirstWashDryer,
-    ProcessSecondWash,
-    ProcessSecondWashHydro,
-    ProcessSecondWashDryer,
     WashProcess,
     HydroProcess,
     DryerProcess,
@@ -24,23 +18,6 @@ from .models import (
 from rest_framework import serializers
 
 # A good rule of thumb: If create, update, and retrieve have different fields, use different serializers.
-
-
-class SimpleBatchSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Batch
-        fields = [
-            "id",
-            "buyer",
-            "color",
-            "shade",
-            "stage",
-            "type",
-            "status",
-            "total_quantity",
-            "total_rewash_quantity",
-            "total_rejection_quantity",
-        ]
 
 
 class BatchSourceInputSerializer(serializers.Serializer):
@@ -184,6 +161,23 @@ class UpdateBatchSerializer(serializers.ModelSerializer):
         return instance
 
 
+class SimpleBatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Batch
+        fields = [
+            "id",
+            "buyer",
+            "color",
+            "shade",
+            "stage",
+            "type",
+            "status",
+            "total_quantity",
+            "total_rewash_quantity",
+            "total_rejection_quantity",
+        ]
+
+
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
@@ -314,138 +308,66 @@ class UpdateHydroProcessSerializer(serializers.ModelSerializer):
         return instance
 
 
-class ProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-    # We will not take input for this field from the frontend.
-    dryer_in_by = serializers.CharField(max_length=100, read_only=True)
+class DryerProcessSerializer(serializers.ModelSerializer):
+    batch = SimpleBatchSerializer(read_only=True)
 
     class Meta:
-        model = ProcessFirstWashDryer
+        model = DryerProcess
         fields = [
             "id",
             "batch",
             "machine",
             "standard_time",
             "type",
-            "dryer_in",
-            "dryer_in_by",
-            "dryer_out",
-            "dryer_out_by",
+            "start_time",
+            "started_by",
+            "finish_time",
+            "finished_by",
         ]
 
-    # Replace the batch ID with its nested serialized data in responses,
-    # while still allowing it to be written as a primary key during create.
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation["batch"] = SimpleBatchSerializer(instance.batch).data
-        return representation
+
+class CreateDryerProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DryerProcess
+        fields = ["batch", "machine", "standard_time", "type"]
+
+    # Check if hydro process is done or not
+    def validate(self, attrs):
+        try:
+            hydro_process = HydroProcess.objects.get(batch=attrs["batch"])
+        except HydroProcess.DoesNotExist:
+            raise serializers.ValidationError(
+                "You've to complete the hydro process first"
+            )
+
+        if not hydro_process.finish_time:
+            raise serializers.ValidationError("Hydro process is not completed yet")
+
+        return attrs
 
     def create(self, validated_data):
-        # Check if Hydro is done or not
-        try:
-            ProcessFirstWashHydro.objects.get(batch=validated_data["batch"])
-        except ProcessFirstWashHydro.DoesNotExist:
-            raise serializers.ValidationError("You've to complete Hydro first")
-
-        # Without completing tumble, you can't do oven or conve
-        # if validated_data["type"] == "oven" or "tumble":
-        #     try:
-        #         ProcessFirstWashDryer.objects.get(batch=validated_data["batch"])
-        #     except ProcessFirstWashDryer.DoesNotExist:
-        #         raise serializers.ValidationError("You've to complete Conveyor first")
-
-        first_wash_dryer = ProcessFirstWashDryer.objects.create(
-            **validated_data, dryer_in_by=get_user_name(self.context["request"])
+        dryer_process = DryerProcess.objects.create(
+            **validated_data, started_by=get_user_name(self.context["request"])
         )
-        return first_wash_dryer
+        return dryer_process
 
 
-class ProcessSecondWashDryerSerializer(serializers.ModelSerializer):
-    # We will not take input for this field from the frontend.
-    dryer_in_by = serializers.CharField(max_length=100, read_only=True)
-
-    class Meta:
-        model = ProcessSecondWashDryer
-        fields = [
-            "id",
-            "batch",
-            "machine",
-            "standard_time",
-            "type",
-            "dryer_in",
-            "dryer_in_by",
-            "dryer_out",
-            "dryer_out_by",
-        ]
-
-    # Replace the batch ID with its nested serialized data in responses,
-    # while still allowing it to be written as a primary key during create.
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation["batch"] = SimpleBatchSerializer(instance.batch).data
-        return representation
-
-    def create(self, validated_data):
-        # Check if Hydro is done or not
-        try:
-            ProcessSecondWashHydro.objects.get(batch=validated_data["batch"])
-        except ProcessSecondWashHydro.DoesNotExist:
-            raise serializers.ValidationError("You've to complete Hydro first")
-
-        # Without completing tumble, you can't do oven or conve
-        # if validated_data["type"] == "oven" or "tumble":
-        #     try:
-        #         ProcessFirstWashDryer.objects.get(batch=validated_data["batch"])
-        #     except ProcessFirstWashDryer.DoesNotExist:
-        #         raise serializers.ValidationError("You've to complete Conveyor first")
-
-        second_wash_dryer = ProcessSecondWashDryer.objects.create(
-            **validated_data, dryer_in_by=get_user_name(self.context["request"])
-        )
-        return second_wash_dryer
-
-
-class UpdateProcessFirstWashDryerSerializer(serializers.ModelSerializer):
-    state = serializers.CharField(max_length=100, write_only=True)
+class UpdateDryerProcessSerializer(serializers.ModelSerializer):
+    action = serializers.ChoiceField(choices=["finish"])
 
     class Meta:
-        model = ProcessFirstWashDryer
-        fields = ["state"]
+        model = DryerProcess
+        fields = ["action"]
 
-    def update(self, instance: ProcessFirstWashDryer, validated_data):
-        state = validated_data["state"]
+    def validate(self, attrs):
+        if self.instance.finish_time:
+            raise serializers.ValidationError("You've already completed this action")
+        return attrs
 
-        if state != "dryer_out":
-            raise serializers.ValidationError("You have to provide validated state")
-
-        if getattr(instance, state) is not None:
-            raise serializers.ValidationError("You've already completed this state")
-
-        instance.dryer_out = timezone.now()
-        instance.dryer_out_by = get_user_name(self.context["request"])
-        instance.save(update_fields=["dryer_out", "dryer_out_by"])
-
-        return instance
-
-
-class UpdateProcessSecondWashDryerSerializer(serializers.ModelSerializer):
-    state = serializers.CharField(max_length=100, write_only=True)
-
-    class Meta:
-        model = ProcessSecondWashDryer
-        fields = ["state"]
-
-    def update(self, instance: ProcessSecondWashDryer, validated_data):
-        state = validated_data["state"]
-
-        if state != "dryer_out":
-            raise serializers.ValidationError("You have to provide validated state")
-
-        if getattr(instance, state) is not None:
-            raise serializers.ValidationError("You've already completed this state")
-
-        instance.dryer_out = timezone.now()
-        instance.dryer_out_by = get_user_name(self.context["request"])
-        instance.save(update_fields=["dryer_out", "dryer_out_by"])
+    def update(self, instance: DryerProcess, validated_data):
+        instance.finish_time = timezone.now()
+        instance.finished_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["finish_time", "finished_by"])
 
         return instance
 

@@ -7,17 +7,7 @@ router.register("machines", views.MachineViewSet, basename="machine")
 router.register("batches", views.BatchViewSet, basename="batch")
 router.register("wash-processes", views.WashProcessViewSet, basename="wash-process")
 router.register("hydro-processes", views.HydroProcessViewSet, basename="hydro-process")
-
-router.register(
-    "first-wash-dryer-processes",
-    views.ProcessFirstWashDryerViewSet,
-    basename="first-wash-dryer-process",
-)
-router.register(
-    "second-wash-dryer-processes",
-    views.ProcessSecondWashDryerViewSet,
-    basename="second-wash-dryer-process",
-)
+router.register("dryer-processes", views.DryerProcessViewSet, basename="dryer-process")
 
 urlpatterns = [
     path("", include(router.urls)),
