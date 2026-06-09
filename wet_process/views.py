@@ -27,6 +27,10 @@ from .serializers import (
     WashProcessSerializer,
     CreateWashProcessSerializer,
     UpdateWashProcessSerializer,
+    HydroProcess,
+    HydroProcessSerializer,
+    CreateHydroProcessSerializer,
+    UpdateHydroProcessSerializer,
 )
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
@@ -70,6 +74,39 @@ class WashProcessViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
         serializer = WashProcessSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class HydroProcessViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = HydroProcess.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateHydroProcessSerializer
+        elif self.request.method == "PATCH":
+            return UpdateHydroProcessSerializer
+        else:
+            return HydroProcessSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = HydroProcessSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = HydroProcessSerializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

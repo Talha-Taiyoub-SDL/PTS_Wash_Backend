@@ -6,6 +6,7 @@ router = DefaultRouter()
 router.register("machines", views.MachineViewSet, basename="machine")
 router.register("batches", views.BatchViewSet, basename="batch")
 router.register("wash-processes", views.WashProcessViewSet, basename="wash-process")
+router.register("hydro-processes", views.HydroProcessViewSet, basename="hydro-process")
 
 
 router.register(

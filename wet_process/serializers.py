@@ -18,6 +18,8 @@ from .models import (
     ProcessSecondWashHydro,
     ProcessSecondWashDryer,
     WashProcess,
+    HydroProcess,
+    DryerProcess,
 )
 from rest_framework import serializers
 
@@ -253,6 +255,61 @@ class UpdateWashProcessSerializer(serializers.ModelSerializer):
         setattr(instance, action, timezone.now())
         setattr(instance, finished_by_field, get_user_name(self.context["request"]))
         instance.save(update_fields=[action, finished_by_field])
+
+        return instance
+
+
+class HydroProcessSerializer(serializers.ModelSerializer):
+    batch = SimpleBatchSerializer(read_only=True)
+
+    class Meta:
+        model = HydroProcess
+        fields = [
+            "id",
+            "batch",
+            "machine",
+            "standard_time",
+            "start_time",
+            "started_by",
+            "finish_time",
+            "finished_by",
+        ]
+
+
+class CreateHydroProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HydroProcess
+        fields = ["batch", "machine", "standard_time"]
+
+    def create(self, validated_data):
+        # Check if wash process is done or not
+        try:
+            WashProcess.objects.get(batch=validated_data["batch"])
+        except WashProcess.DoesNotExist:
+            raise serializers.ValidationError("You've to complete wash process first")
+
+        hydro_process = HydroProcess.objects.create(
+            **validated_data, started_by=get_user_name(self.context["request"])
+        )
+        return hydro_process
+
+
+class UpdateHydroProcessSerializer(serializers.ModelSerializer):
+    action = serializers.ChoiceField(choices=["finish"])
+
+    class Meta:
+        model = HydroProcess
+        fields = ["action"]
+
+    def validate(self, attrs):
+        if self.instance.finish_time:
+            raise serializers.ValidationError("You've already completed this action")
+        return attrs
+
+    def update(self, instance: HydroProcess, validated_data):
+        instance.finish_time = timezone.now()
+        instance.finished_by = get_user_name(self.context["request"])
+        instance.save(update_fields=["finish_time", "finished_by"])
 
         return instance
 
