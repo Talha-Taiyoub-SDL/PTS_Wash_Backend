@@ -6,14 +6,8 @@ router = DefaultRouter()
 router.register("machines", views.MachineViewSet, basename="machine")
 router.register("batches", views.BatchViewSet, basename="batch")
 router.register("wash-processes", views.WashProcessViewSet, basename="wash-process")
-router.register(
-    "first-wash-processes", views.ProcessFirstWashViewSet, basename="first-wash-process"
-)
-router.register(
-    "second-wash-processes",
-    views.ProcessSecondWashViewSet,
-    basename="second-wash-process",
-)
+
+
 router.register(
     "first-wash-hydro-processes",
     views.ProcessFirstWashHydroViewSet,
