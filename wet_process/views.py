@@ -31,6 +31,10 @@ from .serializers import (
     UpdateProcessSecondWashDryerSerializer,
     UpdateProcessSecondWashHydroSerializer,
     UpdateProcessSecondWashSerializer,
+    WashProcess,
+    WashProcessSerializer,
+    CreateWashProcessSerializer,
+    UpdateWashProcessSerializer,
 )
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet
@@ -42,6 +46,39 @@ from rest_framework.decorators import APIView
 class MachineViewSet(ModelViewSet):
     queryset = Machine.objects.all()
     serializer_class = MachineSerializer
+
+
+class WashProcessViewSet(ModelViewSet):
+    def get_queryset(self):
+        queryset = WashProcess.objects.all()
+        batch = self.request.query_params.get("batch")
+        if batch:
+            queryset = queryset.filter(batch=batch)
+
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return CreateWashProcessSerializer
+        elif self.request.method == "PATCH":
+            return UpdateWashProcessSerializer
+        else:
+            return WashProcessSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = WashProcessSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        serializer = WashProcessSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ProcessFirstWashViewSet(ModelViewSet):

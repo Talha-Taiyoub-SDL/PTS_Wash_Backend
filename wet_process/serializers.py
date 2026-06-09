@@ -17,8 +17,11 @@ from .models import (
     ProcessSecondWash,
     ProcessSecondWashHydro,
     ProcessSecondWashDryer,
+    WashProcess,
 )
 from rest_framework import serializers
+
+# A good rule of thumb: If create, update, and retrieve have different fields, use different serializers.
 
 
 class SimpleBatchSerializer(serializers.ModelSerializer):
@@ -166,6 +169,7 @@ class BatchSerializer(serializers.ModelSerializer):
             return batch
 
 
+# This serializer is basically used for updating the status of the batch, like completion of first wash
 class UpdateBatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Batch
@@ -182,6 +186,75 @@ class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
         fields = ["machine_number", "SAP", "added_at"]
+
+
+class WashProcessSerializer(serializers.ModelSerializer):
+    batch = SimpleBatchSerializer(read_only=True)
+    machine = MachineSerializer(read_only=True)
+
+    class Meta:
+        model = WashProcess
+        fields = [
+            "id",
+            "batch",
+            "machine",
+            "standard_time",
+            "loading_start",
+            "loading_started_by",
+            "loading_finish",
+            "loading_finished_by",
+            "process_finish",
+            "process_finished_by",
+            "unloading_finish",
+            "unloading_finished_by",
+        ]
+
+
+class CreateWashProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WashProcess
+        fields = ["batch", "machine", "standard_time"]
+
+    def create(self, validated_data):
+        wash_process = WashProcess.objects.create(
+            **validated_data,
+            loading_started_by=get_user_name(self.context["request"]),
+        )
+        return wash_process
+
+
+class UpdateWashProcessSerializer(serializers.ModelSerializer):
+    action = serializers.CharField(max_length=100, write_only=True)
+
+    class Meta:
+        model = WashProcess
+        fields = ["action"]
+
+    def update(self, instance: WashProcess, validated_data):
+        # Map of action fields to the user field who completed them
+        timestamp_to_user_field = {
+            "loading_finish": "loading_finished_by",
+            "process_finish": "process_finished_by",
+            "unloading_finish": "unloading_finished_by",
+        }
+
+        action = validated_data.get("action")
+        if action not in timestamp_to_user_field:
+            raise serializers.ValidationError("You have to provide a valid action")
+
+        # Check if the state has already been completed
+        if getattr(instance, action) is not None:
+            raise serializers.ValidationError("You've already completed this action")
+
+        # Get the corresponding "finished by" field
+        finished_by_field = timestamp_to_user_field[action]
+
+        # Update timestamp and user who finished it
+        setattr(instance, action, timezone.now())
+        setattr(instance, finished_by_field, get_user_name(self.context["request"]))
+        instance.save(update_fields=[action, finished_by_field])
+
+        return instance
 
 
 class ProcessFirstWashSerializer(serializers.ModelSerializer):
