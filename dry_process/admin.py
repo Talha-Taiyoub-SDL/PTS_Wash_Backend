@@ -9,6 +9,12 @@ class PlanningAdmin(admin.ModelAdmin):
     search_fields = ["mpo"]
 
 
+@admin.register(models.PlanningRouteStep)
+class PlanningRouteStepAdmin(admin.ModelAdmin):
+    list_display = ["id", "planning", "sequence", "stage"]
+    search_fields = ["planning__mpo"]
+
+
 @admin.register(models.TrackingHistory)
 class TrackingHistoryAdmin(admin.ModelAdmin):
     list_display = [
