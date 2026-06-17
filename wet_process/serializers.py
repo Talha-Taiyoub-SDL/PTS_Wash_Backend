@@ -137,6 +137,10 @@ class BatchSerializer(serializers.ModelSerializer):
                     )
 
                     for garment_unit in grouped_source["garment_units"]:
+                        if garment_unit.status == GarmentUnitStatus.REJECTED:
+                            raise serializers.ValidationError(
+                                f"Garment {garment_unit.individual_barcode} is already rejected"
+                            )
                         BatchSourcePiece.objects.create(
                             batch_source=batch_source, garment_unit=garment_unit
                         )
