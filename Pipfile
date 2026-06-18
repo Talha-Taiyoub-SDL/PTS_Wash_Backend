@@ -13,6 +13,7 @@ djangorestframework-simplejwt = "*"
 pillow = "*"
 python-dotenv = "*"
 gunicorn = "*"
+django-filter = "*"
 
 [dev-packages]
 

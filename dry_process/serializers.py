@@ -1,12 +1,89 @@
 from django.db import transaction, IntegrityError
 from django.db.models import Max
-from .models import TrackingHistory
+from django.utils import timezone
+from .models import TrackingHistory, Planning, PlanningRouteStep
 from .choices import Action, RejectionReason
 from rest_framework import serializers
 from common.utils import get_user_name
-from production.models import Planning, PlanningRouteStep
 from common.models import GarmentUnit
 from common.choices import GarmentUnitStatus
+
+
+class PlanningRouteStepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlanningRouteStep
+        fields = ["id", "sequence", "stage"]
+
+
+class PlanningSerializer(serializers.ModelSerializer):
+    route_steps = PlanningRouteStepSerializer(many=True, read_only=True)
+
+    # Stages will be be sent by the client
+    stages = serializers.ListField(child=serializers.CharField(), write_only=True)
+
+    class Meta:
+        model = Planning
+        fields = [
+            "id",
+            "mpo",
+            "color",
+            "updated_by",
+            "last_update",
+            "route_steps",
+            "stages",
+        ]
+        read_only_fields = ["updated_by"]
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            # Create Planning
+            planning = Planning.objects.create(
+                mpo=validated_data["mpo"],
+                color=validated_data["color"],
+                updated_by=get_user_name(self.context["request"]),
+            )
+
+            # Create Route Steps for the created Planning
+            PlanningRouteStep.objects.bulk_create(
+                [
+                    PlanningRouteStep(
+                        planning=planning, sequence=index + 1, stage=stage
+                    )
+                    for (index, stage) in enumerate(validated_data["stages"])
+                ]
+            )
+
+            return planning
+
+
+class UpdatePlanningSerializer(serializers.ModelSerializer):
+    stages = serializers.ListField(child=serializers.CharField(), write_only=True)
+
+    class Meta:
+        model = Planning
+        fields = ["stages"]
+
+    def update(self, instance: Planning, validated_data):
+        with transaction.atomic():
+            # Update the planning
+            instance.updated_by = get_user_name(self.context["request"])
+            instance.last_update = timezone.now()
+            instance.save()
+
+            # Delete the existing routes for this planning
+            instance.route_steps.all().delete()
+
+            # Create new routes for this planning
+            PlanningRouteStep.objects.bulk_create(
+                [
+                    PlanningRouteStep(
+                        planning=instance, sequence=index + 1, stage=stage
+                    )
+                    for (index, stage) in enumerate(validated_data["stages"])
+                ]
+            )
+
+        return instance
 
 
 class TrackingHistorySerializer(serializers.ModelSerializer):
@@ -83,9 +160,11 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         stage = validated_data["stage"]
         action = validated_data["action"]
 
-        # Check if planning exist for the MPO the garment belongs to
+        # Check if planning exist for the MPO and the color this garment belongs to
         try:
-            planning = Planning.objects.get(mpo=garment_unit.mpo)
+            planning = Planning.objects.get(
+                mpo=garment_unit.mpo, color=garment_unit.color
+            )
             max_sequence = planning.route_steps.aggregate(max_sequence=Max("sequence"))[
                 "max_sequence"
             ]
@@ -104,7 +183,7 @@ class TrackingHistorySerializer(serializers.ModelSerializer):
         except Planning.DoesNotExist:
             raise serializers.ValidationError(
                 {
-                    "garment_unit": f"Planning does not exist for the MPO {garment_unit.mpo} and Style {garment_unit.style} this garment belongs to"
+                    "garment_unit": f"Planning does not exist for the MPO {garment_unit.mpo}, Style {garment_unit.style}, and Color {garment_unit.color} this garment belongs to"
                 }
             )
 
