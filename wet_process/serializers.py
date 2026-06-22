@@ -507,7 +507,7 @@ class RejectionSerializer(serializers.Serializer):
 
                 try:
                     Rejection.objects.create(
-                        batch_source=batch_source,
+                        batch=batch,
                         garment_unit=garment_unit,
                         rejection_reason=rejection_reason,
                         operator=get_user_name(self.context["request"]),
