@@ -110,8 +110,10 @@ class RejectionAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "garment_unit",
-        "batch_source",
+        "batch",
         "rejection_reason",
         "rejected_at",
         "operator",
     ]
+
+    search_fields = ["batch"]

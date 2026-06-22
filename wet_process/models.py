@@ -96,10 +96,11 @@ class BatchSource(models.Model):
 
 
 class BatchSourcePiece(models.Model):
+    garment_unit = models.ForeignKey(GarmentUnit, on_delete=models.CASCADE)
+
     batch_source = models.ForeignKey(
         BatchSource, on_delete=models.CASCADE, related_name="pieces"
     )
-    garment_unit = models.ForeignKey(GarmentUnit, on_delete=models.CASCADE)
 
     class Meta:
         # To use piece in second wash or rewash just add batch_source in the fields as constraint
@@ -125,8 +126,8 @@ class Machine(models.Model):
 
 class Rejection(models.Model):
     garment_unit = models.OneToOneField(GarmentUnit, on_delete=models.CASCADE)
-    batch_source = models.ForeignKey(
-        BatchSource, on_delete=models.CASCADE, related_name="rejections"
+    batch = models.ForeignKey(
+        Batch, on_delete=models.CASCADE, related_name="rejections"
     )
     rejection_reason = models.CharField(max_length=100, choices=RejectionReason.choices)
     rejected_at = models.DateTimeField(auto_now=True)
