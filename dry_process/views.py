@@ -39,6 +39,8 @@ class PlannigViewSet(ModelViewSet):
 class TrackingHistoryViewSet(ModelViewSet):
     queryset = TrackingHistory.objects.all()
     serializer_class = TrackingHistorySerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["garment_unit"]
 
 
 class RejectionViewSet(ModelViewSet):
