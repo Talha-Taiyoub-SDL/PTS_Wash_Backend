@@ -114,6 +114,31 @@ class BatchSourcePiece(models.Model):
         ]
 
 
+# This model is to keep the history of the batch: when, how many pieces are received, alotted for rewash
+class BatchSourceTransaction(models.Model):
+    class OperationType(models.TextChoices):
+        RECEIVE = "receive", "Receive"
+        REWASH = "rewash", "Rewash"
+        REJECTION = "rejection", "Rejection"
+
+    batch_source = models.ForeignKey(
+        BatchSource,
+        on_delete=models.CASCADE,
+        related_name="histories",
+    )
+    operation_type = models.CharField(
+        max_length=20,
+        choices=OperationType.choices,
+    )
+
+    previous_quantity = models.PositiveIntegerField()
+    incoming_quantity = models.PositiveIntegerField()
+    current_quantity = models.PositiveIntegerField()
+
+    added_at = models.DateTimeField(auto_now_add=True)
+    added_by = models.CharField(max_length=100)
+
+
 class Machine(models.Model):
     machine_number = models.IntegerField(
         primary_key=True, validators=[MinValueValidator(1)]
