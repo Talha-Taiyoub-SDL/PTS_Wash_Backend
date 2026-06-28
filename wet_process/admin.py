@@ -19,6 +19,7 @@ class BatchAdmin(admin.ModelAdmin):
         "type",
         "status",
         "total_quantity",
+        "total_received_quantity",
         "total_rewash_quantity",
         "total_rejection_quantity",
     ]
@@ -26,6 +27,7 @@ class BatchAdmin(admin.ModelAdmin):
     list_editable = [
         "status",
         "total_quantity",
+        "total_received_quantity",
         "total_rewash_quantity",
         "total_rejection_quantity",
     ]
@@ -40,6 +42,7 @@ class BatchSourceAdmin(admin.ModelAdmin):
         "style",
         "so",
         "quantity",
+        "received_quantity",
         "rewash_quantity",
         "rejection_quantity",
     ]
