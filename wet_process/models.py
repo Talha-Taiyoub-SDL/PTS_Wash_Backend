@@ -40,6 +40,7 @@ class Batch(models.Model):
         max_length=20, choices=BatchStatus.choices, default=BatchStatus.READY_TO_WASH
     )
     total_quantity = models.PositiveIntegerField(default=0)
+    total_received_quantity = models.PositiveIntegerField(default=0)
     total_rewash_quantity = models.PositiveIntegerField(default=0)
     total_rejection_quantity = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -83,6 +84,7 @@ class BatchSource(models.Model):
     style = models.CharField(max_length=100)
     so = models.CharField(max_length=100)
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    received_quantity = models.PositiveIntegerField(default=0)
     rewash_quantity = models.PositiveIntegerField(default=0)
     rejection_quantity = models.PositiveIntegerField(default=0)
 
