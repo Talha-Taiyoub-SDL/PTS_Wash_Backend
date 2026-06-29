@@ -12,5 +12,6 @@ router.register("dryer-processes", views.DryerProcessViewSet, basename="dryer-pr
 urlpatterns = [
     path("", include(router.urls)),
     path("batches/<str:pk>/rewash/", views.BatchRewashView.as_view()),
+    path("batches/<str:pk>/receive/", views.BatchReceiveView.as_view()),
     path("batches/<str:pk>/rejections/", views.RejectionView.as_view()),
 ]

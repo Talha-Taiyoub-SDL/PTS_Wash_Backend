@@ -14,6 +14,7 @@ from .models import (
     WashProcess,
     HydroProcess,
     DryerProcess,
+    BatchSourceTransaction,
 )
 from rest_framework import serializers
 
@@ -42,6 +43,7 @@ class BatchSourceSerializer(serializers.ModelSerializer):
             "style",
             "so",
             "quantity",
+            "received_quantity",
             "rewash_quantity",
             "rejection_quantity",
         ]
@@ -67,6 +69,7 @@ class BatchSerializer(serializers.ModelSerializer):
             "type",
             "status",
             "total_quantity",
+            "total_received_quantity",
             "total_rewash_quantity",
             "total_rejection_quantity",
             "created_at",
@@ -177,6 +180,7 @@ class SimpleBatchSerializer(serializers.ModelSerializer):
             "type",
             "status",
             "total_quantity",
+            "total_received_quantity",
             "total_rewash_quantity",
             "total_rejection_quantity",
         ]
@@ -462,6 +466,55 @@ class BatchRewashSerializer(serializers.Serializer):
         batch.save(update_fields=["total_rewash_quantity"])
 
         return batch
+
+
+class ReceivedSourceSerializer(serializers.Serializer):
+    batch_source = serializers.PrimaryKeyRelatedField(
+        queryset=BatchSource.objects.all()
+    )
+    incoming_quantity = serializers.IntegerField(
+        min_value=1
+    )  # How many garments are received now
+
+
+class BatchReceiveSerializer(serializers.Serializer):
+    sources = ReceivedSourceSerializer(many=True)
+
+    def save(self):
+        batch = self.context["batch"]
+        sources = self.validated_data["sources"]
+
+        # We need to keep the histories. Let's do this.
+        with transaction.atomic():
+            for source in sources:
+                batch_source = source["batch_source"]
+                incoming_quantity = source["incoming_quantity"]
+                previous_quantity = batch_source.received_quantity
+
+                resulting_quantity = previous_quantity + incoming_quantity
+
+                if resulting_quantity > batch_source.quantity:
+                    raise serializers.ValidationError("Orginal quantity exceeded")
+
+                batch_source.received_quantity = resulting_quantity
+                batch_source.save(update_fields=["received_quantity"])
+
+                BatchSourceTransaction.objects.create(
+                    batch_source=batch_source,
+                    operation_type="receive",
+                    previous_quantity=previous_quantity,
+                    incoming_quantity=incoming_quantity,
+                    current_quantity=resulting_quantity,
+                    added_by=get_user_name(self.context["request"]),
+                )
+
+            batch.total_received_quantity = sum(
+                batch.sources.values_list("received_quantity", flat=True)
+            )
+
+            batch.save(update_fields=["total_received_quantity"])
+
+            return batch
 
 
 class RejectionSourceSerializer(serializers.Serializer):

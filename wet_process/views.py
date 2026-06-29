@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from .models import Machine, Batch, WashProcess, HydroProcess, DryerProcess
 from .serializers import (
+    BatchReceiveSerializer,
     MachineSerializer,
     BatchSerializer,
     RejectionSerializer,
@@ -153,6 +154,21 @@ class BatchRewashView(APIView):
         batch = get_object_or_404(Batch, pk=pk)
 
         serializer = BatchRewashSerializer(data=request.data, context={"batch": batch})
+
+        serializer.is_valid(raise_exception=True)
+        batch = serializer.save()
+        serializer = BatchSerializer(batch)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BatchReceiveView(APIView):
+    def patch(self, request, pk):
+        batch = get_object_or_404(Batch, pk=pk)
+
+        serializer = BatchReceiveSerializer(
+            data=request.data, context={"batch": batch, "request": request}
+        )
 
         serializer.is_valid(raise_exception=True)
         batch = serializer.save()
