@@ -120,3 +120,17 @@ class RejectionAdmin(admin.ModelAdmin):
     ]
 
     search_fields = ["batch"]
+
+
+@admin.register(models.BatchSourceTransaction)
+class BatchSourceTransactionAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "batch_source",
+        "operation_type",
+        "previous_quantity",
+        "incoming_quantity",
+        "current_quantity",
+        "added_at",
+        "added_by",
+    ]
